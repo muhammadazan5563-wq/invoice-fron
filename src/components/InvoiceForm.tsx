@@ -16,6 +16,13 @@ interface InvoiceFormProps {
 
 type FormStatus = 'Paid' | 'Due' | 'Unpaid' | 'Pending' | 'Overdue';
 
+// Keep every invoice balance at currency precision. In particular, convert
+// both +0 and -0 to numeric zero before the UI chooses its color/state.
+const normalizeCurrency = (value: number) => {
+  const rounded = Math.round((Number(value) || 0) * 100) / 100;
+  return Object.is(rounded, -0) ? 0 : rounded;
+};
+
 const fieldClass =
   'w-full bg-mist hover:bg-mist-2 focus:bg-mist-2 rounded-2xl px-4 py-3.5 text-[13px] font-semibold text-ink placeholder:text-quill-soft placeholder:font-medium outline-none transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-55 disabled:pointer-events-none';
 
@@ -181,7 +188,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   }, [payments]);
 
   useEffect(() => {
-    const currentBalance = Math.max(0, Math.round((subtotal + subtotal * taxRate / 100 + (invoiceType === 'customer' ? Object.values(expenses).reduce((sum, value) => sum + value, 0) : 0) - amountPaid) * 100) / 100);
+    const currentBalance = normalizeCurrency(subtotal + subtotal * taxRate / 100 + (invoiceType === 'customer' ? Object.values(expenses).reduce((sum, value) => sum + value, 0) : 0) - amountPaid);
     if (currentBalance <= 0) {
       setStatus('Paid');
     } else if (status === 'Paid') {
@@ -299,7 +306,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
         expenseTotal,
         amountPaid,
         paymentDate: paymentDate || date,
-        balance: Math.max(0, Math.round((totalAmount - amountPaid) * 100) / 100),
+        balance: normalizeCurrency(totalAmount - amountPaid),
         status,
         notes: notes.trim(),
         items: items.map((item) => ({
@@ -333,8 +340,11 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   const expenseTotal = invoiceType === 'customer' ? Object.values(expenses).reduce((sum, value) => sum + value, 0) : 0;
   const taxAmount = subtotal * taxRate / 100;
   const totalAmount = subtotal + taxAmount + expenseTotal;
-  const isPaidInFull = totalAmount > 0 && amountPaid >= totalAmount - 0.01;
-  const balance = isPaidInFull ? 0 : Math.max(0, Math.round((totalAmount - amountPaid) * 100) / 100);
+  // Preserve original Change due behavior for real overpayments, but never
+  // allow floating-point -0 to reach the receipt display.
+  const balance = normalizeCurrency(totalAmount - amountPaid);
+  const isPaidInFull = balance === 0;
+  const isChangeDue = balance < 0;
 
   const statusTone = (s: FormStatus, active: boolean) => {
     if (!active) return 'bg-mist text-quill hover:md:bg-mist-2';
@@ -691,14 +701,14 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
 
             <div
               className={`${
-                isPaidInFull ? 'bg-[#3f9c68]' : 'bg-[#c0453c]'
+                isPaidInFull ? 'bg-[#3f9c68]' : isChangeDue ? 'bg-brand' : 'bg-[#c0453c]'
               } text-white px-4 py-3.5 rounded-[16px] flex justify-between items-center`}
             >
               <span className="text-[10px] font-bold uppercase tracking-wider">
-                {isPaidInFull ? 'Paid in full' : 'Balance due'}
+                {isPaidInFull ? 'Paid in full' : isChangeDue ? 'Change due' : 'Balance due'}
               </span>
               <span className="nums text-[16px] font-extrabold font-display">
-                {`${currencySymbol}${money(balance)}`}
+                {isChangeDue ? `-${currencySymbol}${money(Math.abs(balance))}` : `${currencySymbol}${money(balance)}`}
               </span>
             </div>
           </div>
