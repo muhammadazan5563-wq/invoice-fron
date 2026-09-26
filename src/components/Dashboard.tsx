@@ -93,6 +93,13 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   const [fromMonth, setFromMonth] = useState('');
   const [toMonth, setToMonth] = useState('');
   const [invoiceQuery, setInvoiceQuery] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState({
+    customerId: '',
+    status: '',
+    fromMonth: '',
+    toMonth: '',
+    search: '',
+  });
 
   const [confirmModal, setConfirmModal] = useState<{
     title: string;
@@ -151,17 +158,35 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     }
   };
 
-  const fetchInvoices = async (append = false) => {
+  const fetchInvoices = async (append = false, filters = appliedFilters) => {
     if (append && loadingInvoices) return;
     setLoadingInvoices(true);
     setError(null);
     try {
       const nextCustomerPage = append ? invoicePage + 1 : 1;
       const nextVendorPage = append ? vendorInvoicePage + 1 : 1;
-      const customerData = await getInvoicesPage({ page: nextCustomerPage, limit: 50, invoiceType: 'customer' });
-      let vendorData = { invoices: [] as Invoice[], total: 0, hasMore: false, page: nextVendorPage, limit: 50 };
+      const customerData = await getInvoicesPage({
+        page: nextCustomerPage,
+        limit: 300,
+        invoiceType: 'customer',
+        customerId: filters.customerId || undefined,
+        status: filters.status || undefined,
+        fromMonth: filters.fromMonth || undefined,
+        toMonth: filters.toMonth || undefined,
+        search: filters.search || undefined,
+      });
+      let vendorData = { invoices: [] as Invoice[], total: 0, hasMore: false, page: nextVendorPage, limit: 300 };
       try {
-        vendorData = await getInvoicesPage({ page: nextVendorPage, limit: 50, invoiceType: 'vendor' });
+        vendorData = await getInvoicesPage({
+          page: nextVendorPage,
+          limit: 300,
+          invoiceType: 'vendor',
+          customerId: filters.customerId || undefined,
+          status: filters.status || undefined,
+          fromMonth: filters.fromMonth || undefined,
+          toMonth: filters.toMonth || undefined,
+          search: filters.search || undefined,
+        });
       } catch (vendorError) {
         console.warn('Vendor invoices are unavailable:', vendorError);
       }
@@ -400,9 +425,9 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   const currencySymbol = getCurrencySymbol(invoiceTemplate?.currency || 'USD');
 
   // Derived filter data
-  const customers = Array.from(
-    new Set(invoices.map((inv) => inv.customerName).filter(Boolean))
-  ).sort();
+  const customers = contacts
+    .filter((contact) => contact.type === 'customer')
+    .sort((a, b) => a.fullName.localeCompare(b.fullName));
 
   const monthsSet = new Set<string>();
   invoices.forEach((inv) => {
@@ -419,29 +444,8 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
-  const filteredInvoices = invoices.filter((inv) => {
-    if (customerFilter !== 'all' && inv.customerName !== customerFilter) return false;
-    if (statusFilter !== 'all' && inv.status !== statusFilter) return false;
-
-    if (invoiceQuery.trim()) {
-      const q = invoiceQuery.trim().toLowerCase();
-      const hit =
-        inv.id.toLowerCase().includes(q) ||
-        inv.customerName.toLowerCase().includes(q) ||
-        (inv.customerEmail || '').toLowerCase().includes(q);
-      if (!hit) return false;
-    }
-
-    if (fromMonth || toMonth) {
-      const d = new Date(inv.date);
-      if (isNaN(d.getTime())) return false;
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      if (fromMonth && key < fromMonth) return false;
-      if (toMonth && key > toMonth) return false;
-    }
-
-    return true;
-  });
+  // The API returns the filtered page, so totals and pagination represent all matches.
+  const filteredInvoices = invoices;
 
   const activeFilterCount =
     (customerFilter !== 'all' ? 1 : 0) +
@@ -456,6 +460,21 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     setFromMonth('');
     setToMonth('');
     setInvoiceQuery('');
+    const nextFilters = { customerId: '', status: '', fromMonth: '', toMonth: '', search: '' };
+    setAppliedFilters(nextFilters);
+    fetchInvoices(false, nextFilters);
+  };
+
+  const applyFilters = () => {
+    const nextFilters = {
+      customerId: customerFilter === 'all' ? '' : customerFilter,
+      status: statusFilter === 'all' ? '' : statusFilter,
+      fromMonth,
+      toMonth,
+      search: invoiceQuery.trim(),
+    };
+    setAppliedFilters(nextFilters);
+    fetchInvoices(false, nextFilters);
   };
 
   const overdueCount = invoices.filter((inv) => inv.status === 'Overdue' || (inv.balance > 0 && new Date(inv.date).getTime() < Date.now())).length;
@@ -734,8 +753,8 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
                   className="select-bare bg-mist hover:bg-mist-2 text-[12px] font-semibold text-ink pl-4 pr-9 py-3 rounded-full cursor-pointer transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand min-w-[150px]"
                 >
                   <option value="all">All customers</option>
-                  {customers.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  {customers.map((contact) => (
+                    <option key={contact.id} value={contact.id}>{contact.fullName}</option>
                   ))}
                 </select>
                 <ChevronDown className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -786,17 +805,29 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
                 <CalendarDays className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
 
-              <div className="relative flex-1 min-w-[180px]">
+              <div className="relative flex-1 min-w-[160px] max-w-[260px]">
                 <input
                   type="text"
                   value={invoiceQuery}
                   onChange={(e) => setInvoiceQuery(e.target.value)}
                   placeholder="Enter invoice #"
                   aria-label="Search invoices"
-                  className="w-full bg-mist hover:bg-mist-2 focus:bg-mist-2 text-[12px] font-semibold text-ink placeholder:text-quill-soft placeholder:font-medium pl-4 pr-11 py-3 rounded-full outline-none transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') applyFilters();
+                  }}
+                  className="w-full bg-mist hover:bg-mist-2 focus:bg-mist-2 text-[12px] font-semibold text-ink placeholder:text-quill-soft placeholder:font-medium pl-4 pr-10 py-2.5 rounded-full outline-none transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                 />
                 <Search className="w-4 h-4 text-quill absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
+
+              <button
+                type="button"
+                onClick={applyFilters}
+                disabled={loadingInvoices}
+                className="inline-flex items-center gap-1.5 bg-brand hover:bg-brand-mid disabled:opacity-60 disabled:pointer-events-none text-white text-[12px] font-bold px-4 py-2.5 rounded-full transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              >
+                <Search className="w-3.5 h-3.5" /> Search
+              </button>
             </div>
 
             {/* Dark showcase panel */}
