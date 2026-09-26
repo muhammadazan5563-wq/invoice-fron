@@ -21,6 +21,11 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [fromMonth, setFromMonth] = useState('');
+  const [toMonth, setToMonth] = useState('');
+  const [invoiceQuery, setInvoiceQuery] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState({ customerId: '', status: '', fromMonth: '', toMonth: '', search: '' });
   const currencySymbol = getCurrencySymbol(template?.currency || 'PKR');
 
   const matches = useMemo(() => {
@@ -60,14 +65,53 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
     }
   };
 
+  const months = useMemo(() => Array.from(new Set(invoices.map((invoice) => {
+    const date = new Date(invoice.date);
+    return isNaN(date.getTime()) ? '' : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }).filter(Boolean))).sort(), [invoices]);
+
+  const monthLabel = (key: string) => {
+    const [year, month] = key.split('-');
+    return new Date(Number(year), Number(month) - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  const filteredInvoices = useMemo(() => invoices.filter((invoice) => {
+    if (appliedFilters.status && appliedFilters.status !== 'all' && invoice.status !== appliedFilters.status) return false;
+    const query = appliedFilters.search.toLowerCase();
+    if (query && !invoice.id.toLowerCase().includes(query)) return false;
+    if (appliedFilters.fromMonth || appliedFilters.toMonth) {
+      const date = new Date(invoice.date);
+      if (isNaN(date.getTime())) return false;
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (appliedFilters.fromMonth && key < appliedFilters.fromMonth) return false;
+      if (appliedFilters.toMonth && key > appliedFilters.toMonth) return false;
+    }
+    return true;
+  }), [appliedFilters, invoices]);
+
   const totals = useMemo(() => {
-    const billed = invoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-    const paid = invoices.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
-    const outstanding = invoices.reduce((sum, invoice) => sum + Math.max(invoice.balance, 0), 0);
-    const settled = invoices.filter((invoice) => invoice.balance <= 0).length;
-    const overdue = invoices.filter((invoice) => invoice.status === 'Overdue').length;
+    const billed = filteredInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
+    const paid = filteredInvoices.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
+    const outstanding = filteredInvoices.reduce((sum, invoice) => sum + Math.max(invoice.balance, 0), 0);
+    const settled = filteredInvoices.filter((invoice) => invoice.balance <= 0).length;
+    const overdue = filteredInvoices.filter((invoice) => invoice.status === 'Overdue').length;
     return { billed, paid, outstanding, settled, overdue };
-  }, [invoices]);
+  }, [filteredInvoices]);
+
+  const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + (fromMonth ? 1 : 0) + (toMonth ? 1 : 0) + (invoiceQuery.trim() ? 1 : 0);
+
+  const applyFilters = () => setAppliedFilters({
+    customerId: '',
+    status: statusFilter === 'all' ? '' : statusFilter,
+    fromMonth,
+    toMonth,
+    search: invoiceQuery.trim().toLowerCase(),
+  });
+
+  const resetFilters = () => {
+    setStatusFilter('all'); setFromMonth(''); setToMonth(''); setInvoiceQuery('');
+    setAppliedFilters({ customerId: '', status: '', fromMonth: '', toMonth: '', search: '' });
+  };
 
   const clearSelection = () => {
     setSelectedContact(null);
@@ -115,7 +159,17 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
 
       {selectedContact && !loading && <>
         <section className="bg-shell border border-hairline rounded-[26px] p-5 sm:p-6 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3"><div className="w-11 h-11 rounded-2xl bg-brand-pale text-brand flex items-center justify-center"><UserRound className="w-5 h-5" /></div><div><h3 className="text-[17px] font-extrabold text-ink font-display">{selectedContact.fullName}</h3><p className="text-[11px] text-quill-soft font-medium mt-1">{selectedContact.email || selectedContact.phone || 'No contact details'} · {selectedContact.type}</p></div></div><span className="nums text-[11px] font-bold text-brand bg-brand-pale px-3.5 py-2 rounded-full">{invoices.length} complete invoice{invoices.length === 1 ? '' : 's'}</span>
+          <div className="flex items-center gap-3"><div className="w-11 h-11 rounded-2xl bg-brand-pale text-brand flex items-center justify-center"><UserRound className="w-5 h-5" /></div><div><h3 className="text-[17px] font-extrabold text-ink font-display">{selectedContact.fullName}</h3><p className="text-[11px] text-quill-soft font-medium mt-1">{selectedContact.email || selectedContact.phone || 'No contact details'} · {selectedContact.type}</p></div></div><span className="nums text-[11px] font-bold text-brand bg-brand-pale px-3.5 py-2 rounded-full">{filteredInvoices.length} matching invoice{filteredInvoices.length === 1 ? '' : 's'}</span>
+        </section>
+
+        <section className="flex flex-wrap items-center gap-2.5 py-1" id="history-filter-strip">
+          <div className="flex items-center gap-2 mr-1"><span className="text-[12px] font-bold text-ink">Active filters</span><span className="nums w-6 h-6 rounded-full bg-mist-2 text-ink text-[10px] font-bold flex items-center justify-center">{activeFilterCount}</span></div>
+          <div className="relative"><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter history by status" className="select-bare bg-mist hover:bg-mist-2 text-[12px] font-semibold text-ink pl-4 pr-9 py-3 rounded-full cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand min-w-[135px]"><option value="all">All statuses</option>{['Paid', 'Due', 'Unpaid', 'Pending', 'Overdue'].map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
+          <div className="relative"><select value={fromMonth} onChange={(event) => setFromMonth(event.target.value)} aria-label="Filter history from month" className="select-bare bg-mist hover:bg-mist-2 text-[12px] font-semibold text-ink pl-4 pr-10 py-3 rounded-full cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand min-w-[160px]"><option value="">From: any month</option>{months.map((month) => <option key={month} value={month}>{monthLabel(month)}</option>)}</select><CalendarDays className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" /></div>
+          <div className="relative"><select value={toMonth} onChange={(event) => setToMonth(event.target.value)} aria-label="Filter history to month" className="select-bare bg-mist hover:bg-mist-2 text-[12px] font-semibold text-ink pl-4 pr-10 py-3 rounded-full cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand min-w-[160px]"><option value="">To: any month</option>{months.map((month) => <option key={month} value={month}>{monthLabel(month)}</option>)}</select><CalendarDays className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" /></div>
+          <div className="relative flex-1 min-w-[160px] max-w-[260px]"><input type="text" value={invoiceQuery} onChange={(event) => setInvoiceQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') applyFilters(); }} placeholder="Enter invoice #" aria-label="Search account invoices" className="w-full bg-mist hover:bg-mist-2 focus:bg-mist-2 text-[12px] font-semibold text-ink placeholder:text-quill-soft pl-4 pr-10 py-2.5 rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" /><Search className="w-4 h-4 text-quill absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" /></div>
+          <button type="button" onClick={applyFilters} className="inline-flex items-center gap-1.5 bg-brand hover:bg-brand-mid text-white text-[12px] font-bold px-4 py-2.5 rounded-full cursor-pointer"><Search className="w-3.5 h-3.5" /> Search</button>
+          <button type="button" onClick={resetFilters} className="text-[11px] font-bold text-quill hover:text-brand px-2 py-2 cursor-pointer">Reset</button>
         </section>
 
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -124,7 +178,7 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
 
         <section className="bg-shell border border-hairline rounded-[26px] overflow-hidden">
           <div className="px-6 py-5 border-b border-hairline flex items-center justify-between gap-3"><div><h3 className="text-[18px] font-extrabold text-ink font-display">Invoice history</h3><p className="text-[11px] text-quill-soft font-medium mt-1">Complete chronological record for this account.</p></div><CalendarDays className="w-5 h-5 text-brand" /></div>
-          {invoices.length === 0 ? <div className="p-12 text-center"><FileText className="w-7 h-7 text-quill-soft mx-auto" /><p className="text-[13px] font-bold text-ink mt-3">No invoices found for this account.</p></div> : <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="bg-mist text-[10px] uppercase tracking-wider text-quill-soft"><th className="px-6 py-3">Invoice</th><th className="px-4 py-3">Date</th><th className="px-4 py-3 text-right">Billed</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Balance</th><th className="px-6 py-3 text-center">Status</th></tr></thead><tbody>{invoices.map((invoice) => <tr key={invoice.id} className="border-t border-hairline text-[12px] hover:bg-mist/60"><td className="px-6 py-4 font-extrabold text-brand">#{invoice.id}</td><td className="px-4 py-4 text-quill font-semibold">{invoice.date || '—'}</td><td className="px-4 py-4 text-right nums font-bold text-ink">{money(invoice.totalAmount, currencySymbol)}</td><td className="px-4 py-4 text-right nums font-semibold text-[#3f9c68]">{money(invoice.amountPaid, currencySymbol)}</td><td className="px-4 py-4 text-right nums font-bold text-[#a8492f]">{money(Math.max(invoice.balance, 0), currencySymbol)}</td><td className="px-6 py-4 text-center"><span className={`inline-flex px-3 py-1.5 rounded-full text-[10px] font-bold ${invoice.balance <= 0 ? 'bg-[#e8f7ee] text-[#2f6b48]' : invoice.status === 'Overdue' ? 'bg-[#fdeeea] text-[#a8492f]' : 'bg-[#fdf3e2] text-[#8a5c17]'}`}>{invoice.balance <= 0 ? 'Paid' : invoice.status}</span></td></tr>)}</tbody></table></div>}
+          {filteredInvoices.length === 0 ? <div className="p-12 text-center"><FileText className="w-7 h-7 text-quill-soft mx-auto" /><p className="text-[13px] font-bold text-ink mt-3">No invoices match these filters.</p></div> : <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="bg-mist text-[10px] uppercase tracking-wider text-quill-soft"><th className="px-6 py-3">Invoice</th><th className="px-4 py-3">Date</th><th className="px-4 py-3 text-right">Billed</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Balance</th><th className="px-6 py-3 text-center">Status</th></tr></thead><tbody>{filteredInvoices.map((invoice) => <tr key={invoice.id} className="border-t border-hairline text-[12px] hover:bg-mist/60"><td className="px-6 py-4 font-extrabold text-brand">#{invoice.id}</td><td className="px-4 py-4 text-quill font-semibold">{invoice.date || '—'}</td><td className="px-4 py-4 text-right nums font-bold text-ink">{money(invoice.totalAmount, currencySymbol)}</td><td className="px-4 py-4 text-right nums font-semibold text-[#3f9c68]">{money(invoice.amountPaid, currencySymbol)}</td><td className="px-4 py-4 text-right nums font-bold text-[#a8492f]">{money(Math.max(invoice.balance, 0), currencySymbol)}</td><td className="px-6 py-4 text-center"><span className={`inline-flex px-3 py-1.5 rounded-full text-[10px] font-bold ${invoice.balance <= 0 ? 'bg-[#e8f7ee] text-[#2f6b48]' : invoice.status === 'Overdue' ? 'bg-[#fdeeea] text-[#a8492f]' : 'bg-[#fdf3e2] text-[#8a5c17]'}`}>{invoice.balance <= 0 ? 'Paid' : invoice.status}</span></td></tr>)}</tbody></table></div>}
         </section>
       </>}
     </div>
