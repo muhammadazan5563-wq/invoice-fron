@@ -3,6 +3,10 @@ import { apiRequest, apiJson } from './api';
 
 function rowToInvoice(row: any): Invoice {
   const value = (camel: string, snake: string, fallback: any = '') => row[camel] ?? row[snake] ?? fallback;
+  const totalAmount = Number(value('totalAmount', 'total_amount', 0));
+  const amountPaid = Number(value('amountPaid', 'amount_paid', 0));
+  const rawBalance = Number(value('balance', 'balance', 0));
+  const balance = Math.max(0, Math.round(rawBalance * 100) / 100);
   const expenses = row.expenses || {
     baraf: Number(value('baraf', 'baraf', 0)),
     rickshawRent: Number(value('rickshawRent', 'rickshaw_rent', 0)),
@@ -16,15 +20,15 @@ function rowToInvoice(row: any): Invoice {
     customerId: value('customerId', 'customer_id'),
     customerEmail: value('customerEmail', 'customer_email'),
     customerPhone: value('customerPhone', 'customer_phone'),
-    totalAmount: Number(value('totalAmount', 'total_amount', 0)),
+    totalAmount,
     taxRate: Number(value('taxRate', 'tax_rate', 0)),
     taxAmount: Number(value('taxAmount', 'tax_amount', 0)),
     expenses: { baraf: Number(expenses.baraf || 0), rickshawRent: Number(expenses.rickshawRent || 0), workerExpense: Number(expenses.workerExpense || 0) },
     expenseTotal: Number(value('expenseTotal', 'expense_total', 0)),
-    amountPaid: Number(value('amountPaid', 'amount_paid', 0)),
+    amountPaid,
     paymentDate: value('paymentDate', 'payment_date'),
-    balance: Number(value('balance', 'balance', 0)),
-    status: value('status', 'status', 'Pending'),
+    balance,
+    status: balance === 0 && totalAmount > 0 && amountPaid >= totalAmount ? 'Paid' : value('status', 'status', 'Pending'),
     notes: value('notes', 'notes'),
     items: Array.isArray(row.items) ? row.items : [],
     payments: Array.isArray(row.payments) ? row.payments : [],
