@@ -24,8 +24,6 @@ import InvoiceForm from './InvoiceForm';
 import Settings from './Settings';
 import Ledger from './Ledger';
 import KpiCards from './KpiCards';
-import { DashboardSummary } from './KpiCards';
-import { apiRequest } from '../lib/api';
 import InvoiceShowcase from './InvoiceShowcase';
 import Contacts from './Contacts';
 import Payment from './Payment';
@@ -79,8 +77,6 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   const [editingInvoice, setEditingInvoice] = useState<Invoice | undefined>(undefined);
   const [showcaseSelection, setShowcaseSelection] = useState<Invoice | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary | null>(null);
-  const [vendorDashboardSummary, setVendorDashboardSummary] = useState<DashboardSummary | null>(null);
 
   // Filter strip state — drives the ledger + showcase below
   const [customerFilter, setCustomerFilter] = useState('all');
@@ -111,25 +107,6 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     getContacts().then(setContacts).catch((err) => console.warn('Failed to load contacts:', err));
   }, []);
 
-  useEffect(() => {
-    fetchDashboardSummary();
-  }, [invoiceTemplate?.timezone]);
-
-  const fetchDashboardSummary = async () => {
-    try {
-      const date = getTodayInTimezone(invoiceTemplate?.timezone || 'UTC');
-      const query = `date=${encodeURIComponent(date)}`;
-      const [customerSummary, vendorSummary] = await Promise.all([
-        apiRequest<DashboardSummary>(`/api/dashboard/summary?${query}&mode=customer`),
-        apiRequest<DashboardSummary>(`/api/dashboard/summary?${query}&mode=vendor`),
-      ]);
-      setDashboardSummary(customerSummary);
-      setVendorDashboardSummary(vendorSummary);
-    } catch (err) {
-      console.warn('Failed to load dashboard summary:', err);
-    }
-  };
-
   const loadTemplateSettings = async () => {
     try {
       const settings = await getUserSettings(user.uid);
@@ -159,7 +136,6 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
       }
       setInvoices(customerData);
       setVendorInvoices(vendorData);
-      await fetchDashboardSummary();
     } catch (err: any) {
       setError(err.message || 'Failed to load invoices from Supabase.');
     } finally {
@@ -688,7 +664,6 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
           <div className="space-y-6" id="main-dashboard-panels">
             <KpiCards
               invoices={invoices}
-              summary={dashboardSummary}
               currencySymbol={currencySymbol}
               workspaceImage={WORKSPACE_IMAGE}
               onOpenLedger={() => setViewState('ledger')}
@@ -849,7 +824,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
 
         {viewState === 'vendor-dashboard' && (
           <div className="space-y-6 animate-fade-in" id="vendor-dashboard-panels">
-            <KpiCards mode="vendor" invoices={vendorInvoices} summary={vendorDashboardSummary} currencySymbol={currencySymbol} workspaceImage={WORKSPACE_IMAGE} onOpenLedger={() => setViewState('ledger')} template={invoiceTemplate} onCreateInvoice={() => { setEditingInvoice(undefined); setViewState('create'); }} onSync={fetchInvoices} loadingSync={loadingInvoices} />
+            <KpiCards mode="vendor" invoices={vendorInvoices} currencySymbol={currencySymbol} workspaceImage={WORKSPACE_IMAGE} onOpenLedger={() => setViewState('ledger')} template={invoiceTemplate} onCreateInvoice={() => { setEditingInvoice(undefined); setViewState('create'); }} onSync={fetchInvoices} loadingSync={loadingInvoices} />
             <InvoiceList invoices={vendorInvoices} onEdit={(invoice) => { setEditingInvoice(invoice); setViewState('edit'); }} onDelete={handleDeleteInvoice} onMarkAsPaid={handleMarkAsPaid} template={invoiceTemplate} />
           </div>
         )}
