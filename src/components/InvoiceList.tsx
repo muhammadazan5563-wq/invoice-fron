@@ -662,7 +662,7 @@ export default function InvoiceList({ invoices, onEdit, onDelete, onMarkAsPaid, 
 
                   {!!selectedInvoice.taxAmount && (
                     <div className="flex justify-between items-center text-[12px] font-semibold text-quill">
-                      <span>Tax {selectedInvoice.taxRate ? `(${selectedInvoice.taxRate}%)` : ''}</span>
+                      <span>Commission {selectedInvoice.taxRate ? `(${selectedInvoice.taxRate}%)` : ''}</span>
                       <span className="nums">{currencySymbol}{money(selectedInvoice.taxAmount)}</span>
                     </div>
                   )}
