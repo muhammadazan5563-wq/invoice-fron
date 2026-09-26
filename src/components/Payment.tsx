@@ -61,7 +61,7 @@ export default function Payment({ invoices, vendorInvoices, contacts, template, 
   const history = useMemo<PaymentLog[]>(() => {
     const grouped = new Map<string, PaymentLog>();
     [...invoices, ...vendorInvoices].forEach((invoice) => {
-      (invoice.payments || []).forEach((entry, index) => {
+      (invoice.payments || []).filter((entry) => Number(entry.amount || 0) > 0).forEach((entry, index) => {
         // New entries share paymentId across invoice splits. Older entries use
         // a stable fallback key and remain visible individually.
         const paymentId = entry.paymentId || `${invoice.id}-${entry.date}-${index}`;
