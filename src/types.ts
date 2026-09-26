@@ -11,6 +11,8 @@ export interface BookingItem {
 
 export interface PaymentRecord {
   amount: number;
+  /** Amount applied to invoices; differs from amount for an unapplied overpayment. */
+  appliedAmount?: number;
   date: string;
   /** Shared ID links invoice splits back to one admin payment entry. */
   paymentId?: string;
