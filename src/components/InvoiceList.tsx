@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Invoice } from '../types';
 import { InvoiceTemplate, getCurrencySymbol } from '../lib/settings';
-import { Search, Eye, Edit2, CheckCircle, Trash2, Printer, FileText, Mail, Phone, MapPin, X, Plus, Waves } from 'lucide-react';
+import { Search, Eye, Edit2, CheckCircle, Trash2, Printer, FileText, Mail, Phone, MapPin, X, Plus, Waves, Loader2 } from 'lucide-react';
 import InvoiceQRCode from './InvoiceQRCode';
 
 interface InvoiceListProps {
@@ -23,6 +23,7 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [visibleCount, setVisibleCount] = useState<number>(50);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const currencySymbol = getCurrencySymbol(template?.currency || 'USD');
 
@@ -479,14 +480,25 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
             {(filteredInvoices.length > visibleCount || hasMore) && (
               <button
                 type="button"
-                onClick={() => {
-                  if (hasMore && onLoadMore) onLoadMore();
-                  else setVisibleCount((prev) => prev + 50);
+                disabled={loadingMore}
+                onClick={async () => {
+                  if (loadingMore) return;
+                  if (hasMore && onLoadMore) {
+                    setLoadingMore(true);
+                    try {
+                      await onLoadMore();
+                      setVisibleCount((prev) => prev + 50);
+                    } finally {
+                      setLoadingMore(false);
+                    }
+                  } else {
+                    setVisibleCount((prev) => prev + 50);
+                  }
                 }}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand hover:bg-brand-mid text-white font-bold px-5 py-2.5 rounded-full text-[11px] transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand hover:bg-brand-mid disabled:opacity-60 disabled:pointer-events-none text-white font-bold px-5 py-2.5 rounded-full text-[11px] transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               >
-                <Plus className="w-3.5 h-3.5" />
-                Load 50 more
+                {loadingMore ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                {loadingMore ? 'Loading invoices…' : 'Load 50 more'}
               </button>
             )}
           </div>
