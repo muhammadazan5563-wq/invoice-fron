@@ -366,7 +366,7 @@ export default function Contacts() {
             </div>
 
             <div>
-              <label className={labelClass} htmlFor="contact-tax-rate">Tax rate (%)</label>
+              <label className={labelClass} htmlFor="contact-tax-rate">Commission rate (%)</label>
               <input
                 id="contact-tax-rate"
                 type="number"
