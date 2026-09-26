@@ -353,58 +353,17 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   };
 
   const handleApplyPayment = async (contactId: string, amount: number): Promise<number> => {
-    const contactInvoices = [...invoices, ...vendorInvoices]
-      .filter((invoice) => invoice.customerId === contactId && invoice.balance > 0)
-      .sort((a, b) => {
-        const dateDifference = new Date(a.date).getTime() - new Date(b.date).getTime();
-        return dateDifference || a.id.localeCompare(b.id);
-      });
-    const allocated = Math.min(amount, contactInvoices.reduce((sum, invoice) => sum + invoice.balance, 0));
-    if (allocated <= 0) throw new Error('This contact has no outstanding invoice balance.');
-
     const paymentDate = getTodayInTimezone(invoiceTemplate?.timezone || 'UTC');
-    const paymentId = crypto.randomUUID();
-    const contact = contacts.find((item) => item.id === contactId);
-    let remaining = allocated;
-    const excess = Math.max(0, amount - allocated);
-    const updates = contactInvoices.flatMap((invoice, invoiceIndex) => {
-      if (remaining <= 0) return [];
-      const applied = Math.min(remaining, invoice.balance);
-      remaining -= applied;
-      const balance = Math.max(0, invoice.balance - applied);
-      const paymentEntries = [...(invoice.payments || []), {
-        amount: applied,
-        appliedAmount: applied,
-        date: paymentDate,
-        paymentId,
-        contactName: contact?.fullName || invoice.customerName,
-        contactPhone: contact?.phone || invoice.customerPhone || '',
-      }];
-      if (invoiceIndex === 0 && excess > 0) paymentEntries.push({
-        amount: excess,
-        appliedAmount: 0,
-        date: paymentDate,
-        paymentId,
-        contactName: contact?.fullName || invoice.customerName,
-        contactPhone: contact?.phone || invoice.customerPhone || '',
-      });
-      const updatedInvoice: Omit<Invoice, 'rowIndex' | 'rawRow'> = {
-        ...invoice,
-        amountPaid: invoice.amountPaid + applied,
-        paymentDate,
-        balance,
-        status: balance === 0 ? 'Paid' : 'Due',
-        payments: paymentEntries,
-      };
-      return [updateInvoice(invoice.id, updatedInvoice)];
-    });
-
     setLoadingInvoices(true);
     setError(null);
     try {
-      await Promise.all(updates);
+      const result = await apiRequest<{ allocated: number }>('/api/payments', {
+        method: 'POST',
+        body: JSON.stringify({ contactId, amount, paymentDate, paymentId: crypto.randomUUID() }),
+      });
       await fetchInvoices();
-      return allocated;
+      await fetchDashboardSummary();
+      return result.allocated;
     } catch (err: any) {
       throw new Error(`Payment saved only partially or failed: ${err.message}`);
     } finally {
