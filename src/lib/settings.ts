@@ -14,6 +14,7 @@ export interface InvoiceTemplate {
   contactEmail: string;
   contactAddress: string;
   tagline: string;
+  fishSpecies: string[];
 }
 
 export interface SpreadsheetSettings {
@@ -49,6 +50,7 @@ const DEFAULT_TEMPLATE: InvoiceTemplate = {
   contactEmail: 'billing@finnova.com',
   contactAddress: '123 Anywhere St., Any City',
   tagline: 'Smart Finances, Better Business',
+  fishSpecies: ['Rohu', 'Catla', 'Mrigal', 'Mahseer', 'Grass Carp', 'Silver Carp', 'Common Carp', 'Singhari', 'Khagga', 'Sole', 'Surmai', 'Pamfret', 'Hilsa', 'Bangda', 'Daman', 'Mullan', 'Mushka', 'Khaira', 'Dawan', 'Poplet', 'Dangri', 'Suwa', 'Heera', 'Kalbose', 'Pari', 'Mali', 'Chital', 'Tilapia', 'Trout', 'Snakehead', 'Sardine', 'Snapper', 'Grouper', 'Barracuda', 'Cobia', 'Threadfin', 'Mullet', 'Seabass', 'Emperor', 'Kingfish', 'Tuna', 'Dolphin Fish', 'Ribbonfish', 'Eel', 'Catfish', 'Skate', 'Ray', 'Butterfish', 'Grunt', 'Trevally'],
 };
 
 export const CURRENCY_SYMBOLS: Record<string, string> = { USD: '$', EUR: '€', GBP: '£', PKR: '₨', AED: 'د.إ', SAR: '﷼', INR: '₹' };
