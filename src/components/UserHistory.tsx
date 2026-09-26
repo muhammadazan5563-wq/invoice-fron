@@ -86,7 +86,7 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
 
   return (
     <div className="space-y-6 animate-fade-in" id="user-history-panel">
-      <section className="bg-ink rounded-[28px] p-6 sm:p-8 text-white overflow-hidden relative">
+      <section className="bg-ink rounded-[28px] p-6 sm:p-8 text-white overflow-visible relative z-30">
         <div className="absolute -right-16 -top-20 w-64 h-64 rounded-full bg-brand/25 blur-3xl pointer-events-none" />
         <div className="relative">
           <div className="flex items-start gap-4">
@@ -102,7 +102,7 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
             <div className="relative">
               <label htmlFor="history-contact" className="block text-[10px] font-bold uppercase tracking-wider text-white/45 mb-2">Search name, email or phone</label>
               <input id="history-contact" value={contactSearch} onChange={(event) => { setContactSearch(event.target.value); setSelectedContact(null); setSearched(false); }} placeholder={`Search ${contactType}...`} className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-[12px] font-semibold text-white placeholder:text-white/30 outline-none focus:border-brand-soft" />
-              {matches.length > 0 && <div className="absolute z-20 top-full left-0 right-0 mt-2 bg-shell rounded-2xl shadow-xl border border-hairline overflow-hidden">{matches.map((contact) => <button type="button" key={contact.id} onClick={() => chooseContact(contact)} className="w-full text-left px-4 py-3 hover:bg-mist text-[12px] font-bold text-ink"><span>{contact.fullName}</span><span className="block text-[10px] text-quill font-medium mt-0.5">{contact.email || contact.phone || contact.companyName || 'No contact details'}</span></button>)}</div>}
+              {matches.length > 0 && <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-shell rounded-2xl shadow-xl border border-hairline overflow-hidden">{matches.map((contact) => <button type="button" key={contact.id} onClick={() => chooseContact(contact)} className="w-full text-left px-4 py-3 hover:bg-mist text-[12px] font-bold text-ink"><span>{contact.fullName}</span><span className="block text-[10px] text-quill font-medium mt-0.5">{contact.email || contact.phone || contact.companyName || 'No contact details'}</span></button>)}</div>}
             </div>
             <button type="button" onClick={clearSelection} disabled={!selectedContact && !contactSearch} className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 disabled:opacity-35 text-white text-[12px] font-bold px-4 py-3 rounded-xl cursor-pointer"><XCircle className="w-4 h-4" /> Clear</button>
           </div>
