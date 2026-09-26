@@ -1,8 +1,9 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { AlertCircle, CheckCircle2, CreditCard, History, Save } from 'lucide-react';
 import { Contact } from '../lib/contacts';
 import { Invoice } from '../types';
 import { InvoiceTemplate, getCurrencySymbol } from '../lib/settings';
+import { apiRequest } from '../lib/api';
 
 interface PaymentProps {
   invoices: Invoice[];
@@ -31,6 +32,10 @@ export default function Payment({ invoices, vendorInvoices, contacts, template, 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [history, setHistory] = useState<PaymentLog[]>([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyHasMore, setHistoryHasMore] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const currencySymbol = getCurrencySymbol(template?.currency || 'PKR');
 
   const selectedContact = contacts.find((contact) => contact.id === contactId);
@@ -58,29 +63,21 @@ export default function Payment({ invoices, vendorInvoices, contacts, template, 
   const outstanding = contactInvoices.reduce((sum, invoice) => sum + invoice.balance, 0);
   const plannedAllocation = Math.min(numericAmount, outstanding);
 
-  const history = useMemo<PaymentLog[]>(() => {
-    const grouped = new Map<string, PaymentLog>();
-    [...invoices, ...vendorInvoices].forEach((invoice) => {
-      (invoice.payments || []).filter((entry) => Number(entry.amount || 0) > 0).forEach((entry, index) => {
-        // New entries share paymentId across invoice splits. Older entries use
-        // a stable fallback key and remain visible individually.
-        const paymentId = entry.paymentId || `${invoice.id}-${entry.date}-${index}`;
-        const existing = grouped.get(paymentId);
-        if (existing) {
-          existing.amount += Number(entry.amount || 0);
-        } else {
-          grouped.set(paymentId, {
-            paymentId,
-            date: entry.date,
-            name: entry.contactName || invoice.customerName,
-            phone: entry.contactPhone || invoice.customerPhone || '',
-            amount: Number(entry.amount || 0),
-          });
-        }
-      });
-    });
-    return Array.from(grouped.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [invoices, vendorInvoices]);
+  const loadHistory = async (page = 1) => {
+    setHistoryLoading(true);
+    try {
+      const result = await apiRequest<{ logs: PaymentLog[]; hasMore: boolean }>(`/api/payment-logs?page=${page}&limit=50`);
+      setHistory((existing) => page === 1 ? result.logs : [...existing, ...result.logs]);
+      setHistoryPage(page);
+      setHistoryHasMore(result.hasMore);
+    } catch (err: any) {
+      setError(err?.message || 'Could not load payment history.');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => { loadHistory(); }, []);
 
   const chooseContact = (contact: Contact) => {
     setContactId(contact.id);
@@ -100,6 +97,7 @@ export default function Payment({ invoices, vendorInvoices, contacts, template, 
     setSaving(true);
     try {
       const allocated = await onSavePayment(contactId, numericAmount);
+      await loadHistory(1);
       setMessage(
         allocated < numericAmount
           ? `${money(allocated, currencySymbol)} saved. The remaining ${money(numericAmount - allocated, currencySymbol)} has no outstanding invoice balance.`
@@ -143,7 +141,7 @@ export default function Payment({ invoices, vendorInvoices, contacts, template, 
 
       <section className="bg-shell rounded-[26px] border border-hairline overflow-hidden">
         <div className="px-6 py-5 border-b border-hairline flex items-center gap-3"><History className="w-4 h-4 text-brand" /><div><h2 className="text-[16px] font-extrabold text-ink font-display">Payment entries</h2><p className="text-[11px] text-quill-soft mt-1">Each saved payment appears once, even when it covers multiple invoices.</p></div></div>
-        {history.length === 0 ? <p className="p-6 text-[12px] text-quill">No payment entries yet.</p> : <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="bg-mist text-[10px] uppercase tracking-wider text-quill-soft"><th className="px-6 py-3">Date</th><th className="px-4 py-3">Name</th><th className="px-4 py-3">Phone number</th><th className="px-6 py-3 text-right">Amount</th></tr></thead><tbody>{history.map((entry) => <tr key={entry.paymentId} className="border-t border-hairline text-[12px]"><td className="px-6 py-4 nums text-quill">{entry.date}</td><td className="px-4 py-4 font-bold text-ink">{entry.name}</td><td className="px-4 py-4 text-quill">{entry.phone || '—'}</td><td className="px-6 py-4 text-right nums font-extrabold text-[#2f6b48]">{money(entry.amount, currencySymbol)}</td></tr>)}</tbody></table></div>}
+        {history.length === 0 && !historyLoading ? <p className="p-6 text-[12px] text-quill">No payment entries yet.</p> : <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="bg-mist text-[10px] uppercase tracking-wider text-quill-soft"><th className="px-6 py-3">Date</th><th className="px-4 py-3">Name</th><th className="px-4 py-3">Phone number</th><th className="px-6 py-3 text-right">Amount</th></tr></thead><tbody>{history.map((entry) => <tr key={entry.paymentId} className="border-t border-hairline text-[12px]"><td className="px-6 py-4 nums text-quill">{entry.date}</td><td className="px-4 py-4 font-bold text-ink">{entry.name}</td><td className="px-4 py-4 text-quill">{entry.phone || '—'}</td><td className="px-6 py-4 text-right nums font-extrabold text-[#2f6b48]">{money(entry.amount, currencySymbol)}</td></tr>)}</tbody></table>{historyHasMore && <div className="p-4 text-center"><button type="button" onClick={() => loadHistory(historyPage + 1)} disabled={historyLoading} className="bg-mist hover:bg-mist-2 text-ink text-[12px] font-bold px-5 py-2.5 rounded-full disabled:opacity-50">{historyLoading ? 'Loading…' : 'Load more'}</button></div>}</div>}
       </section>
     </div>
   );
