@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CalendarDays, CheckCircle2, Clock3, FileText, Search, UserRound, WalletCards, XCircle } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Clock3, FileText, Printer, Search, UserRound, WalletCards, XCircle } from 'lucide-react';
 import { Contact } from '../lib/contacts';
 import { getInvoicesPage } from '../lib/invoices';
 import { Invoice } from '../types';
@@ -103,6 +103,33 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
     setAppliedFilters({ customerId: '', status: '', fromMonth: '', toMonth: '', search: '' });
   };
 
+  const printHistory = () => {
+    if (filteredInvoices.length === 0) return;
+    const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character] || character));
+    const pages = filteredInvoices.map((invoice) => {
+      const items = invoice.items.length > 0
+        ? invoice.items.map((item) => `<tr><td>${escapeHtml(item.roomType || '—')}</td><td>${escapeHtml(item.description || '—')}</td><td class="num">${item.quantity || 0}</td><td class="num">${money(item.price || 0, currencySymbol)}</td><td class="num">${money(item.total || (item.quantity || 0) * (item.price || 0), currencySymbol)}</td></tr>`).join('')
+        : '<tr><td colspan="5" class="muted">No line items recorded</td></tr>';
+      const payments = invoice.payments.length > 0
+        ? invoice.payments.map((payment) => `<div class="payment-row"><span>${escapeHtml(payment.date || 'Payment')}</span><strong>${money(payment.amount || 0, currencySymbol)}</strong></div>`).join('')
+        : '<div class="muted">No payments recorded</div>';
+      return `<article class="invoice-page">
+        <header class="invoice-header"><div><div class="brand">${escapeHtml(template?.companyName || 'FINNOVA')}</div><div class="muted">${escapeHtml(template?.contactEmail || '')}</div></div><div class="invoice-meta"><strong>INVOICE #${escapeHtml(invoice.id)}</strong><span>Date: ${escapeHtml(invoice.date || '—')}</span></div></header>
+        <section class="billed"><div><label>BILLED TO</label><strong>${escapeHtml(invoice.customerName)}</strong><span>${escapeHtml(invoice.customerEmail || invoice.customerPhone || '')}</span></div><div class="status">${escapeHtml(invoice.balance <= 0 ? 'PAID' : invoice.status)}</div></section>
+        <table class="items"><thead><tr><th>Fish species</th><th>Description</th><th class="num">Quantity</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead><tbody>${items}</tbody></table>
+        <div class="lower"><div><section class="box"><label>PAYMENT INFORMATION</label>${payments}</section><section class="box"><label>NOTES</label><div>${escapeHtml(invoice.notes || '—').replace(/\n/g, '<br>')}</div></section></div><div class="totals"><div><span>Total amount</span><strong>${money(invoice.totalAmount, currencySymbol)}</strong></div><div><span>Amount paid</span><strong class="paid">${money(invoice.amountPaid, currencySymbol)}</strong></div><div class="balance"><span>${invoice.balance <= 0 ? 'PAID IN FULL' : 'BALANCE DUE'}</span><strong>${money(Math.max(invoice.balance, 0), currencySymbol)}</strong></div></div></div>
+        <footer><span>Individual account history · ${escapeHtml(selectedContact?.fullName || '')}</span><span>Invoice ${escapeHtml(invoice.id)}</span></footer>
+      </article>`;
+    }).join('');
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(selectedContact?.fullName || 'Invoice history')}</title><meta charset="utf-8"><style>
+      @page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0;background:#e9e8f0;color:#17152c;font-family:Arial,Helvetica,sans-serif}.invoice-page{width:210mm;min-height:297mm;margin:0 auto;padding:22mm 18mm 18mm;background:#fff;display:flex;flex-direction:column;page-break-after:always}.invoice-page:last-child{page-break-after:auto}.invoice-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #e7e5ef;padding-bottom:20px}.brand{font-size:25px;font-weight:800;letter-spacing:-.04em}.muted{font-size:10px;color:#88849c;margin-top:5px}.invoice-meta{display:flex;flex-direction:column;align-items:flex-end;gap:7px;font-size:11px}.invoice-meta strong{background:#5a49e6;color:#fff;padding:13px 16px;border-radius:12px}.billed{display:flex;justify-content:space-between;align-items:center;padding:25px 0}.billed label,.box label{display:block;font-size:9px;color:#9692a8;font-weight:700;letter-spacing:.12em;margin-bottom:8px}.billed strong{display:block;font-size:16px}.billed span{display:block;font-size:10px;color:#77738a;margin-top:5px}.status{background:#e8f7ee;color:#2f6b48;border-radius:18px;padding:9px 15px;font-size:10px;font-weight:800}.items{width:100%;border-collapse:collapse;font-size:10px}.items th{background:#f5f4f9;color:#77738a;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.08em;padding:12px 10px}.items td{border-bottom:1px solid #eceaf2;padding:14px 10px}.num{text-align:right}.lower{display:grid;grid-template-columns:1fr 1fr;gap:25px;margin-top:auto;padding-top:55px}.box{background:#f6f5fb;border-radius:14px;padding:15px;margin-bottom:12px;font-size:10px;line-height:1.6}.payment-row{display:flex;justify-content:space-between;border-bottom:1px solid #e6e4ee;padding:5px 0}.totals{font-size:11px}.totals>div{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #eceaf2}.totals strong{font-size:13px}.totals .paid{color:#3f9c68}.totals .balance{background:#3f9c68;color:#fff;padding:15px;border-radius:12px;margin-top:12px;border:0}.totals .balance strong{color:#fff}footer{display:flex;justify-content:space-between;border-top:1px solid #e7e5ef;margin-top:30px;padding-top:14px;color:#9692a8;font-size:9px}@media print{body{background:#fff}.invoice-page{margin:0}}
+    </style></head><body>${pages}</body></html>`);
+    printWindow.document.close();
+    printWindow.onload = () => { printWindow.focus(); printWindow.print(); };
+  };
+
   const clearSelection = () => {
     setSelectedContact(null);
     setContactSearch('');
@@ -159,6 +186,7 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
           <div className="relative"><input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} aria-label="Filter history to date" title="To date" className="bg-mist hover:bg-mist-2 text-[12px] font-semibold text-ink pl-4 pr-10 py-2.5 rounded-full cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand min-w-[160px]" /><CalendarDays className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" /></div>
           <div className="relative flex-1 min-w-[160px] max-w-[260px]"><input type="text" value={invoiceQuery} onChange={(event) => setInvoiceQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') applyFilters(); }} placeholder="Enter invoice #" aria-label="Search account invoices" className="w-full bg-mist hover:bg-mist-2 focus:bg-mist-2 text-[12px] font-semibold text-ink placeholder:text-quill-soft pl-4 pr-10 py-2.5 rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" /><Search className="w-4 h-4 text-quill absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" /></div>
           <button type="button" onClick={applyFilters} className="inline-flex items-center gap-1.5 bg-brand hover:bg-brand-mid text-white text-[12px] font-bold px-4 py-2.5 rounded-full cursor-pointer"><Search className="w-3.5 h-3.5" /> Search</button>
+          <button type="button" onClick={printHistory} disabled={filteredInvoices.length === 0} className="inline-flex items-center gap-1.5 bg-ink hover:bg-ink-2 disabled:opacity-40 disabled:pointer-events-none text-white text-[12px] font-bold px-4 py-2.5 rounded-full cursor-pointer"><Printer className="w-3.5 h-3.5" /> Print</button>
           <button type="button" onClick={resetFilters} className="text-[11px] font-bold text-quill hover:text-brand px-2 py-2 cursor-pointer">Reset</button>
         </section>
 
