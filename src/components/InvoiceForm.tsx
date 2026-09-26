@@ -628,10 +628,10 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <label htmlFor="inv-tax-rate" className="text-[11px] font-bold text-quill">Tax rate (%)</label>
+              <label htmlFor="inv-tax-rate" className="text-[11px] font-bold text-quill">Commission rate (%)</label>
               <input id="inv-tax-rate" type="number" min="0" step="0.01" value={taxRate || ''} onChange={(e) => setTaxRate(Math.max(0, parseFloat(e.target.value) || 0))} className="nums appearance-none w-28 bg-shell rounded-xl px-3 py-2 text-right text-[12px] font-bold text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand" placeholder="0.00" />
             </div>
-            <div className="flex justify-between items-center text-[11px] text-quill"><span>Tax amount</span><span className="nums font-bold text-ink">{currencySymbol}{money(taxAmount)}</span></div>
+            <div className="flex justify-between items-center text-[11px] text-quill"><span>Commission amount</span><span className="nums font-bold text-ink">{currencySymbol}{money(taxAmount)}</span></div>
             {invoiceType === 'customer' && <div className="flex justify-between items-center text-[11px] text-quill"><span>Expenses</span><span className="nums font-bold text-ink">{currencySymbol}{money(expenseTotal)}</span></div>}
             <div className="flex justify-between items-center pt-3 border-t border-hairline"><span className="text-[11px] font-bold text-quill">Total amount</span><span className="nums text-[15px] font-extrabold text-ink font-display">{currencySymbol}{money(totalAmount)}</span></div>
 
