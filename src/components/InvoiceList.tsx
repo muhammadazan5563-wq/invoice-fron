@@ -13,7 +13,7 @@ interface InvoiceListProps {
 }
 
 const money = (n: number) =>
-  n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  (Object.is(n, -0) ? 0 : n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 export default function InvoiceList({ invoices, onEdit, onDelete, onMarkAsPaid, template }: InvoiceListProps) {
   const [search, setSearch] = useState('');
