@@ -1,6 +1,25 @@
 import { Invoice } from '../types';
 import { apiRequest, apiJson } from './api';
 
+export interface InvoicePage {
+  invoices: Invoice[];
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
+
+export interface InvoicePageOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  customerId?: string;
+  fromMonth?: string;
+  toMonth?: string;
+  invoiceType?: 'customer' | 'vendor';
+}
+
 function rowToInvoice(row: any): Invoice {
   const value = (camel: string, snake: string, fallback: any = '') => row[camel] ?? row[snake] ?? fallback;
   const expenses = row.expenses || {
@@ -57,9 +76,30 @@ function invoiceToRow(invoice: Omit<Invoice, 'rowIndex' | 'rawRow'>) {
   };
 }
 
+export async function getInvoicesPage(options: InvoicePageOptions = {}): Promise<InvoicePage> {
+  const params = new URLSearchParams();
+  params.set('page', String(Math.max(1, options.page || 1)));
+  params.set('limit', String(Math.min(100, Math.max(1, options.limit || 50))));
+  if (options.search?.trim()) params.set('search', options.search.trim());
+  if (options.status && options.status !== 'All') params.set('status', options.status);
+  if (options.customerId) params.set('customerId', options.customerId);
+  if (options.fromMonth) params.set('fromMonth', options.fromMonth);
+  if (options.toMonth) params.set('toMonth', options.toMonth);
+  if (options.invoiceType) params.set('invoiceType', options.invoiceType);
+  const response = await apiRequest<any>(`/api/invoices?${params.toString()}`);
+  const rows = Array.isArray(response) ? response : response?.invoices || [];
+  return {
+    invoices: rows.map(rowToInvoice),
+    page: Number(response?.page || options.page || 1),
+    limit: Number(response?.limit || options.limit || 50),
+    total: Number(response?.total ?? rows.length),
+    hasMore: Boolean(response?.hasMore ?? rows.length === (options.limit || 50)),
+  };
+}
+
+// Kept for secondary views that need a bounded page but do not yet expose controls.
 export async function getInvoices(): Promise<Invoice[]> {
-  const rows = await apiRequest<any[]>('/api/invoices');
-  return (rows || []).map(rowToInvoice);
+  return (await getInvoicesPage()).invoices;
 }
 
 export async function createInvoice(invoice: Omit<Invoice, 'rowIndex' | 'rawRow'>): Promise<void> {
@@ -75,8 +115,7 @@ export async function deleteInvoice(id: string, invoiceType: 'customer' | 'vendo
 }
 
 export async function getVendorInvoices(): Promise<Invoice[]> {
-  const rows = await apiRequest<any[]>('/api/invoices');
-  return (rows || []).filter((row) => (row.invoiceType || row.invoice_type) === 'vendor').map((row) => ({ ...rowToInvoice(row), invoiceType: 'vendor' }));
+  return (await getInvoicesPage({ invoiceType: 'vendor' })).invoices;
 }
 
 export async function getPublicInvoice(rawId: string): Promise<Invoice | null> {
