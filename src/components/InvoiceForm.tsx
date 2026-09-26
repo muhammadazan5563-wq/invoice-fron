@@ -181,7 +181,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   }, [payments]);
 
   useEffect(() => {
-    const currentBalance = subtotal + subtotal * taxRate / 100 + (invoiceType === 'customer' ? Object.values(expenses).reduce((sum, value) => sum + value, 0) : 0) - amountPaid;
+    const currentBalance = Math.max(0, Math.round((subtotal + subtotal * taxRate / 100 + (invoiceType === 'customer' ? Object.values(expenses).reduce((sum, value) => sum + value, 0) : 0) - amountPaid) * 100) / 100);
     if (currentBalance <= 0) {
       setStatus('Paid');
     } else if (status === 'Paid') {
@@ -299,7 +299,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
         expenseTotal,
         amountPaid,
         paymentDate: paymentDate || date,
-        balance: totalAmount - amountPaid,
+        balance: Math.max(0, Math.round((totalAmount - amountPaid) * 100) / 100),
         status,
         notes: notes.trim(),
         items: items.map((item) => ({
@@ -333,7 +333,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   const expenseTotal = invoiceType === 'customer' ? Object.values(expenses).reduce((sum, value) => sum + value, 0) : 0;
   const taxAmount = subtotal * taxRate / 100;
   const totalAmount = subtotal + taxAmount + expenseTotal;
-  const balance = totalAmount - amountPaid;
+  const balance = Math.max(0, Math.round((totalAmount - amountPaid) * 100) / 100);
 
   const statusTone = (s: FormStatus, active: boolean) => {
     if (!active) return 'bg-mist text-quill hover:md:bg-mist-2';
