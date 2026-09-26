@@ -439,8 +439,8 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
             </button>
           </div>
 
-          <div className="bg-mist rounded-[20px] overflow-hidden">
-            <div className="overflow-x-auto">
+          <div className="bg-mist rounded-[20px] overflow-visible">
+            <div className="overflow-visible">
               <table className="w-full min-w-[900px] text-left border-collapse">
                 <thead>
                   <tr className="text-quill">
@@ -455,7 +455,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
                 <tbody>
                   {items.map((item, index) => (
                     <tr key={index} className="bg-shell border-t-4 border-mist">
-                      <td className="p-3">
+                      <td className="p-3 relative z-50">
                         <div className="relative">
                           <input
                             type="text"
