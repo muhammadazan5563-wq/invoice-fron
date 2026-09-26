@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, FileText, QrCode, ArrowRight, Waves } from 'lucide-react';
+import { apiRequest } from '../lib/api';
 
 const BRAND_MARK =
   'https://mgx-backend-cdn.metadl.com/generate/images/1500378/2026-08-01/tumdfoacajra/logo-finnova-n-mark.png';
@@ -22,10 +23,14 @@ export default function InvoiceLookup() {
     setError('');
     setIsSearching(true);
 
-    // The invoice page performs the authoritative database lookup.
-    // Navigating directly avoids the retired Google Sheets lookup path.
-    navigate(`/invoice/${encodeURIComponent(trimmed)}`);
-    setIsSearching(false);
+    try {
+      await apiRequest(`/api/public-invoice/${encodeURIComponent(trimmed)}`);
+      navigate(`/invoice/${encodeURIComponent(trimmed)}`);
+    } catch (err: any) {
+      setError(err?.message || 'Invoice not found. Check the invoice number and try again.');
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   return (
