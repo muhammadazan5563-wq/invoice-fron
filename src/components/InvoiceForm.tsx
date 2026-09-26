@@ -211,6 +211,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
     const item = { ...updated[index] };
     if (field === 'amount') {
       item.amount = Math.max(0, parseFloat(value) || 0);
+      item.appliedAmount = item.amount;
     } else if (field === 'date') {
       item.date = value;
     }
