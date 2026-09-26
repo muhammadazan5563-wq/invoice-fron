@@ -285,24 +285,35 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     const paymentId = crypto.randomUUID();
     const contact = contacts.find((item) => item.id === contactId);
     let remaining = allocated;
-    const updates = contactInvoices.flatMap((invoice) => {
+    const excess = Math.max(0, amount - allocated);
+    const updates = contactInvoices.flatMap((invoice, invoiceIndex) => {
       if (remaining <= 0) return [];
       const applied = Math.min(remaining, invoice.balance);
       remaining -= applied;
       const balance = Math.max(0, invoice.balance - applied);
+      const paymentEntries = [...(invoice.payments || []), {
+        amount: applied,
+        appliedAmount: applied,
+        date: paymentDate,
+        paymentId,
+        contactName: contact?.fullName || invoice.customerName,
+        contactPhone: contact?.phone || invoice.customerPhone || '',
+      }];
+      if (invoiceIndex === 0 && excess > 0) paymentEntries.push({
+        amount: excess,
+        appliedAmount: 0,
+        date: paymentDate,
+        paymentId,
+        contactName: contact?.fullName || invoice.customerName,
+        contactPhone: contact?.phone || invoice.customerPhone || '',
+      });
       const updatedInvoice: Omit<Invoice, 'rowIndex' | 'rawRow'> = {
         ...invoice,
         amountPaid: invoice.amountPaid + applied,
         paymentDate,
         balance,
         status: balance === 0 ? 'Paid' : 'Due',
-        payments: [...(invoice.payments || []), {
-          amount: applied,
-          date: paymentDate,
-          paymentId,
-          contactName: contact?.fullName || invoice.customerName,
-          contactPhone: contact?.phone || invoice.customerPhone || '',
-        }],
+        payments: paymentEntries,
       };
       return [updateInvoice(invoice.id, updatedInvoice)];
     });
