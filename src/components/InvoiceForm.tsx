@@ -19,7 +19,7 @@ type FormStatus = 'Paid' | 'Due' | 'Unpaid' | 'Pending' | 'Overdue';
 // Keep every invoice balance at currency precision. In particular, convert
 // both +0 and -0 to numeric zero before the UI chooses its color/state.
 const normalizeCurrency = (value: number) => {
-  const rounded = Math.round((Number(value) || 0) * 100) / 100;
+  const rounded = Math.round(Number(value) || 0);
   return Object.is(rounded, -0) ? 0 : rounded;
 };
 
