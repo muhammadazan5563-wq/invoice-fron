@@ -22,8 +22,8 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [fromMonth, setFromMonth] = useState('');
-  const [toMonth, setToMonth] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [invoiceQuery, setInvoiceQuery] = useState('');
   const [appliedFilters, setAppliedFilters] = useState({ customerId: '', status: '', fromMonth: '', toMonth: '', search: '' });
   const currencySymbol = getCurrencySymbol(template?.currency || 'PKR');
@@ -65,16 +65,6 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
     }
   };
 
-  const months = useMemo(() => Array.from(new Set(invoices.map((invoice) => {
-    const date = new Date(invoice.date);
-    return isNaN(date.getTime()) ? '' : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-  }).filter(Boolean))).sort(), [invoices]);
-
-  const monthLabel = (key: string) => {
-    const [year, month] = key.split('-');
-    return new Date(Number(year), Number(month) - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  };
-
   const filteredInvoices = useMemo(() => invoices.filter((invoice) => {
     if (appliedFilters.status && appliedFilters.status !== 'all' && invoice.status !== appliedFilters.status) return false;
     const query = appliedFilters.search.toLowerCase();
@@ -82,9 +72,9 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
     if (appliedFilters.fromMonth || appliedFilters.toMonth) {
       const date = new Date(invoice.date);
       if (isNaN(date.getTime())) return false;
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      if (appliedFilters.fromMonth && key < appliedFilters.fromMonth) return false;
-      if (appliedFilters.toMonth && key > appliedFilters.toMonth) return false;
+      const invoiceDate = invoice.date.slice(0, 10);
+      if (appliedFilters.fromMonth && invoiceDate < appliedFilters.fromMonth) return false;
+      if (appliedFilters.toMonth && invoiceDate > appliedFilters.toMonth) return false;
     }
     return true;
   }), [appliedFilters, invoices]);
@@ -98,18 +88,18 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
     return { billed, paid, outstanding, settled, overdue };
   }, [filteredInvoices]);
 
-  const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + (fromMonth ? 1 : 0) + (toMonth ? 1 : 0) + (invoiceQuery.trim() ? 1 : 0);
+  const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + (fromDate ? 1 : 0) + (toDate ? 1 : 0) + (invoiceQuery.trim() ? 1 : 0);
 
   const applyFilters = () => setAppliedFilters({
     customerId: '',
     status: statusFilter === 'all' ? '' : statusFilter,
-    fromMonth,
-    toMonth,
+    fromMonth: fromDate,
+    toMonth: toDate,
     search: invoiceQuery.trim().toLowerCase(),
   });
 
   const resetFilters = () => {
-    setStatusFilter('all'); setFromMonth(''); setToMonth(''); setInvoiceQuery('');
+    setStatusFilter('all'); setFromDate(''); setToDate(''); setInvoiceQuery('');
     setAppliedFilters({ customerId: '', status: '', fromMonth: '', toMonth: '', search: '' });
   };
 
@@ -165,8 +155,8 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
         <section className="flex flex-wrap items-center gap-2.5 py-1" id="history-filter-strip">
           <div className="flex items-center gap-2 mr-1"><span className="text-[12px] font-bold text-ink">Active filters</span><span className="nums w-6 h-6 rounded-full bg-mist-2 text-ink text-[10px] font-bold flex items-center justify-center">{activeFilterCount}</span></div>
           <div className="relative"><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter history by status" className="select-bare bg-mist hover:bg-mist-2 text-[12px] font-semibold text-ink pl-4 pr-9 py-3 rounded-full cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand min-w-[135px]"><option value="all">All statuses</option>{['Paid', 'Due', 'Unpaid', 'Pending', 'Overdue'].map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
-          <div className="relative"><select value={fromMonth} onChange={(event) => setFromMonth(event.target.value)} aria-label="Filter history from month" className="select-bare bg-mist hover:bg-mist-2 text-[12px] font-semibold text-ink pl-4 pr-10 py-3 rounded-full cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand min-w-[160px]"><option value="">From: any month</option>{months.map((month) => <option key={month} value={month}>{monthLabel(month)}</option>)}</select><CalendarDays className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" /></div>
-          <div className="relative"><select value={toMonth} onChange={(event) => setToMonth(event.target.value)} aria-label="Filter history to month" className="select-bare bg-mist hover:bg-mist-2 text-[12px] font-semibold text-ink pl-4 pr-10 py-3 rounded-full cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand min-w-[160px]"><option value="">To: any month</option>{months.map((month) => <option key={month} value={month}>{monthLabel(month)}</option>)}</select><CalendarDays className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" /></div>
+          <div className="relative"><input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} aria-label="Filter history from date" title="From date" className="bg-mist hover:bg-mist-2 text-[12px] font-semibold text-ink pl-4 pr-10 py-2.5 rounded-full cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand min-w-[160px]" /><CalendarDays className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" /></div>
+          <div className="relative"><input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} aria-label="Filter history to date" title="To date" className="bg-mist hover:bg-mist-2 text-[12px] font-semibold text-ink pl-4 pr-10 py-2.5 rounded-full cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand min-w-[160px]" /><CalendarDays className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" /></div>
           <div className="relative flex-1 min-w-[160px] max-w-[260px]"><input type="text" value={invoiceQuery} onChange={(event) => setInvoiceQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') applyFilters(); }} placeholder="Enter invoice #" aria-label="Search account invoices" className="w-full bg-mist hover:bg-mist-2 focus:bg-mist-2 text-[12px] font-semibold text-ink placeholder:text-quill-soft pl-4 pr-10 py-2.5 rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" /><Search className="w-4 h-4 text-quill absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" /></div>
           <button type="button" onClick={applyFilters} className="inline-flex items-center gap-1.5 bg-brand hover:bg-brand-mid text-white text-[12px] font-bold px-4 py-2.5 rounded-full cursor-pointer"><Search className="w-3.5 h-3.5" /> Search</button>
           <button type="button" onClick={resetFilters} className="text-[11px] font-bold text-quill hover:text-brand px-2 py-2 cursor-pointer">Reset</button>
