@@ -299,7 +299,7 @@ export default function InvoicePublicView() {
                       {currencySymbol}{money(invoice.totalAmount)}
                     </span>
                   </div>
-                  {!!invoice.taxAmount && <div className="flex justify-between items-center text-[12px] font-semibold text-quill"><span>Tax {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</span><span className="nums">{currencySymbol}{money(invoice.taxAmount)}</span></div>}
+                  {!!invoice.taxAmount && <div className="flex justify-between items-center text-[12px] font-semibold text-quill"><span>Commission {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</span><span className="nums">{currencySymbol}{money(invoice.taxAmount)}</span></div>}
 
                   <div className="flex justify-between items-start pt-3 border-t border-hairline">
                     <span className="text-[12px] font-semibold text-quill">Amount paid</span>
