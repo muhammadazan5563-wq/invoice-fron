@@ -28,6 +28,7 @@ import { apiRequest } from '../lib/api';
 import InvoiceShowcase from './InvoiceShowcase';
 import Contacts from './Contacts';
 import Payment from './Payment';
+import UserHistory from './UserHistory';
 import { Contact, getContacts } from '../lib/contacts';
 import {
   LogOut,
@@ -61,7 +62,7 @@ interface DashboardProps {
   onTokenRefresh?: (newToken: string) => void;
 }
 
-type ViewState = 'dashboard' | 'vendor-dashboard' | 'create' | 'edit' | 'settings' | 'ledger' | 'payment' | 'contacts';
+type ViewState = 'dashboard' | 'vendor-dashboard' | 'create' | 'edit' | 'settings' | 'ledger' | 'payment' | 'contacts' | 'search';
 
 export default function Dashboard({ user, token, onLogout, onTokenRefresh }: DashboardProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -499,6 +500,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     { key: 'ledger', label: 'Ledger' },
     { key: 'payment', label: 'Payment' },
     { key: 'contacts', label: 'Contacts' },
+    { key: 'search', label: 'Search' },
     { key: 'settings', label: 'Settings' },
   ];
 
@@ -519,6 +521,8 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
                 ? 'Payment'
               : viewState === 'contacts'
                 ? 'Contacts'
+              : viewState === 'search'
+                ? 'Search history'
               : 'Settings';
 
   const pageSubtitle =
@@ -536,6 +540,8 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
                 ? 'Record payments and allocate them from the oldest invoice to the newest.'
               : viewState === 'contacts'
                 ? 'Manage the vendors and customers connected to your ledger.'
+              : viewState === 'search'
+                ? 'Search any customer or vendor’s complete invoice history.'
               : 'Company profile, currency and sheet connection.';
 
   return (
@@ -998,6 +1004,10 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
           <div className="animate-fade-in" id="contacts-section">
             <Contacts />
           </div>
+        )}
+
+        {viewState === 'search' && (
+          <UserHistory contacts={contacts} template={invoiceTemplate} />
         )}
 
         {/* ── Settings ──────────────────────────────────────── */}
