@@ -1,0 +1,405 @@
+import { useState, useEffect } from 'react';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { getCurrencySymbol, getTemplateWithDefaults, InvoiceTemplate } from '../lib/settings';
+import {
+  ArrowLeft,
+  AlertCircle,
+  Printer,
+  Phone,
+  Mail,
+  MapPin,
+  Waves,
+} from 'lucide-react';
+import InvoiceQRCode from './InvoiceQRCode';
+
+const BRAND_MARK =
+  'https://mgx-backend-cdn.metadl.com/generate/images/1500378/2026-08-01/tumdfoacajra/logo-finnova-n-mark.png';
+
+interface FisheryItem {
+  roomType?: string;
+  fishSpecies?: string;
+  description?: string;
+  quantity: number;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  price: number;
+  total: number;
+}
+
+interface InvoiceRecord {
+  id: string;
+  date: string;
+  customerName: string;
+  customerEmail: string;
+  invoiceType?: 'customer' | 'vendor';
+  totalAmount: number;
+  taxRate?: number;
+  taxAmount?: number;
+  expenses?: { baraf: number; rickshawRent: number; workerExpense: number };
+  expenseTotal?: number;
+  amountPaid: number;
+  paymentDate: string;
+  balance: number;
+  status: string;
+  notes: string;
+  items: FisheryItem[];
+  payments: { amount: number; date: string }[];
+}
+
+
+const money = (n: number) =>
+  n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+export default function InvoicePublicView() {
+  const { invoiceId } = useParams<{ invoiceId: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const [invoice, setInvoice] = useState<InvoiceRecord | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const savedTemplate = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('invoice-template') || 'null') as InvoiceTemplate | null;
+    } catch {
+      return null;
+    }
+  })();
+  const passedTemplate = (location.state as any)?.invoiceTemplate as InvoiceTemplate | null;
+  const invoiceTemplate = getTemplateWithDefaults(
+    (passedTemplate || savedTemplate || { currency: 'PKR' }) as InvoiceTemplate
+  );
+  const currencySymbol = getCurrencySymbol(invoiceTemplate.currency || 'PKR');
+  const returnTo = (location.state as any)?.returnTo || '/track';
+  const goBack = () => navigate(returnTo);
+
+  useEffect(() => {
+    if (!invoiceId) {
+      setError('No invoice number provided');
+      setLoading(false);
+      return;
+    }
+
+    const fetchInvoice = async () => {
+      try {
+        // Invoice data is now the only source of truth. Do not make the old
+        // Google Sheets request on the critical invoice-opening path.
+        const response = await fetch(`/api/public-invoice/${encodeURIComponent(invoiceId)}`);
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.error || 'Invoice not found');
+        }
+        setInvoice(await response.json());
+      } catch (err: any) {
+        setError(err.message || 'Failed to load invoice');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInvoice();
+  }, [invoiceId]);
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-canvas">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-9 h-9 border-[3px] border-hairline border-t-brand rounded-full animate-spin" />
+          <p className="text-[12px] font-bold text-quill">Loading invoice…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !invoice) {
+    return (
+      <div className="min-h-screen bg-canvas px-3 sm:px-5 py-4 sm:py-6">
+        <div className="max-w-[600px] mx-auto">
+          <header className="flex items-center gap-4 mb-8">
+            <button
+              onClick={goBack}
+              className="w-10 h-10 rounded-full bg-mist hover:bg-mist-2 flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4 text-ink" />
+            </button>
+            <a href="/" className="flex items-center gap-2.5 no-underline">
+              <img src={BRAND_MARK} alt="" className="w-8 h-8 object-contain" />
+              <span className="text-[16px] font-extrabold tracking-tight text-ink font-display">FINNOVA</span>
+            </a>
+          </header>
+
+          <div className="bg-shell rounded-[28px] p-8 text-center shadow-[0_20px_60px_-30px_rgba(19,17,38,0.15)]">
+            <span className="w-14 h-14 rounded-2xl bg-[#fdeeea] flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-6 h-6 text-[#a8492f]" />
+            </span>
+            <h2 className="text-[18px] font-extrabold text-ink font-display">Invoice Not Found</h2>
+            <p className="text-[13px] text-quill mt-2 max-w-sm mx-auto leading-relaxed font-medium">{error}</p>
+            <button
+              onClick={goBack}
+              className="mt-6 bg-brand hover:bg-brand-mid text-white text-[12px] font-bold px-6 py-3 rounded-full transition-colors cursor-pointer"
+            >
+              Try Another Number
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isPaid = invoice ? invoice.balance <= 0 : false;
+
+  return (
+    <div className="min-h-screen bg-canvas px-3 sm:px-5 py-4 sm:py-6 print:bg-white print:p-0">
+      <div className="max-w-[900px] mx-auto">
+        {/* Header */}
+        <header className="flex items-center justify-between gap-4 mb-6 print:hidden">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={goBack}
+              className="w-10 h-10 rounded-full bg-mist hover:bg-mist-2 flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4 text-ink" />
+            </button>
+            <a href="/" className="flex items-center gap-2.5 no-underline">
+              <img src={BRAND_MARK} alt="" className="w-8 h-8 object-contain" />
+              <span className="text-[16px] font-extrabold tracking-tight text-ink font-display">FINNOVA</span>
+            </a>
+          </div>
+
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-2 bg-ink hover:bg-ink-2 text-white text-[12px] font-bold px-5 py-3 rounded-full transition-colors cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
+          </button>
+        </header>
+
+        {/* ===== INVOICE CARD (from Supabase) ===== */}
+        {invoice && (
+          <div className="track-invoice-print bg-shell border-t-[6px] border-ink rounded-[30px] overflow-hidden shadow-[0_40px_90px_-60px_rgba(19,17,38,0.25)] mb-6 print:shadow-none print:rounded-none">
+            {/* Branding Header */}
+            <div className="p-7 sm:p-8 space-y-7">
+              {/* Top branding */}
+              <div className="flex flex-wrap justify-between items-start gap-4 pb-6 border-b border-hairline">
+                <div className="flex items-center gap-3">
+                  <img src={invoiceTemplate.companyLogo || BRAND_MARK} alt="" className="w-12 h-12 object-contain rounded-xl" />
+                  <div>
+                    <h1 className="text-[26px] leading-none font-extrabold tracking-tight text-ink font-display">
+                      {invoiceTemplate.companyName || 'FINNOVA'}
+                    </h1>
+                    <p className="text-[10px] text-quill-soft font-bold uppercase tracking-wider mt-1.5">
+                      {invoiceTemplate.tagline || 'Smart Finances, Better Business'}
+                    </p>
+                  </div>
+                </div>
+                <Waves className="w-9 h-9 text-brand-soft" />
+              </div>
+
+              {/* Guest + invoice meta */}
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-5">
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-quill-soft uppercase tracking-wider">Billed to</span>
+                  <div className="text-[19px] font-extrabold text-ink tracking-tight font-display">
+                    {invoice.customerName}
+                  </div>
+                  {invoice.customerEmail && (
+                    <div className="text-[12px] text-quill font-semibold">{invoice.customerEmail}</div>
+                  )}
+                </div>
+
+                <div className="bg-brand text-white rounded-[18px] overflow-hidden flex min-w-[240px]">
+                  <div className="p-4 flex-1 text-center border-r border-white/15">
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-white/65">Invoice no</div>
+                    <div className="nums text-[15px] font-extrabold mt-1">{invoice.id}</div>
+                  </div>
+                  <div className="p-4 flex-1 text-center">
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-white/65">Date</div>
+                    <div className="nums text-[13px] font-bold mt-1.5">{invoice.date}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Line Items Table */}
+              {invoice.items && invoice.items.length > 0 && (
+                <div className="bg-mist rounded-[18px] overflow-hidden">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="text-quill font-bold text-[10px] uppercase tracking-wider">
+                        <th className="py-3.5 px-4">Fish species</th>
+                        <th className="py-3.5 px-4">Description</th>
+                        <th className="py-3.5 px-4 text-center">Quantity (kg)</th>
+                        {invoice.invoiceType !== 'vendor' && <th className="py-3.5 px-4 text-right">Rate / kg</th>}
+                        <th className="py-3.5 px-4 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-ink text-[12px]">
+                      {invoice.items.map((item, idx) => (
+                        <tr key={idx} className="bg-shell border-t-4 border-mist">
+                          <td className="py-3.5 px-4 font-bold">{item.fishSpecies || item.roomType || '—'}</td>
+                          <td className="py-3.5 px-4 text-quill">{item.description || '—'}</td>
+                          <td className="nums py-3.5 px-4 text-center font-semibold">{item.quantity}</td>
+                          {invoice.invoiceType !== 'vendor' && <td className="nums py-3.5 px-4 text-right font-semibold">{currencySymbol}{money(item.price)}</td>}
+                          <td className="nums py-3.5 px-4 text-right font-bold">
+                            {currencySymbol}{money(item.total)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Terms and payment information */}
+              <div className="space-y-6">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-quill-soft block mb-2">
+                    Terms & conditions
+                  </span>
+                  <p className="text-[11px] text-quill leading-relaxed font-medium whitespace-pre-line">
+                    {invoiceTemplate.termsAndConditions || 'Payment is due within 30 days of invoice date.\nLate payments may incur additional charges.\nAll prices are in USD unless otherwise stated.'}
+                  </p>
+                </div>
+
+                {(invoice.notes || (invoice.expenseTotal || 0) > 0) && (
+                  <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.45fr)_minmax(220px,0.8fr)] gap-4 items-stretch">
+                    {invoice.notes && (
+                      <div className="bg-mist rounded-[18px] px-5 py-5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-quill-soft block mb-2">
+                          Payment information
+                        </span>
+                        <p className="text-[11px] text-ink leading-relaxed font-medium whitespace-pre-line">
+                          {invoice.notes}
+                        </p>
+                      </div>
+                    )}
+
+                    {(invoice.expenseTotal || 0) > 0 && (
+                      <div className="bg-mist rounded-[18px] px-5 py-5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-quill-soft block mb-3">
+                          Expense details
+                        </span>
+                        <div className="space-y-2.5 text-[11px]">
+                          <div className="flex justify-between gap-3"><span className="text-quill">Baraf</span><span className="nums font-bold text-ink">{currencySymbol}{money(invoice.expenses?.baraf || 0)}</span></div>
+                          <div className="flex justify-between gap-3"><span className="text-quill">Rickshaw Rent</span><span className="nums font-bold text-ink">{currencySymbol}{money(invoice.expenses?.rickshawRent || 0)}</span></div>
+                          <div className="flex justify-between gap-3"><span className="text-quill">Worker Expense</span><span className="nums font-bold text-ink">{currencySymbol}{money(invoice.expenses?.workerExpense || 0)}</span></div>
+                          <div className="flex justify-between gap-3 border-t border-hairline pt-2.5"><span className="font-bold text-quill">Total expenses</span><span className="nums font-extrabold text-ink">{currencySymbol}{money(invoice.expenseTotal || 0)}</span></div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Totals */}
+                <div className="space-y-3.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[12px] font-semibold text-quill">Total amount</span>
+                    <span className="nums text-[17px] font-extrabold text-ink font-display">
+                      {currencySymbol}{money(invoice.totalAmount)}
+                    </span>
+                  </div>
+                  {!!invoice.taxAmount && <div className="flex justify-between items-center text-[12px] font-semibold text-quill"><span>Tax {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</span><span className="nums">{currencySymbol}{money(invoice.taxAmount)}</span></div>}
+
+                  <div className="flex justify-between items-start pt-3 border-t border-hairline">
+                    <span className="text-[12px] font-semibold text-quill">Amount paid</span>
+                    <div className="text-right">
+                      <span className="nums text-[15px] font-bold text-[#3f9c68]">
+                        {currencySymbol}{money(invoice.amountPaid)}
+                      </span>
+                      {invoice.paymentDate && (
+                        <div className="nums text-[10px] text-quill-soft mt-0.5 font-semibold">
+                          {invoice.paymentDate}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div
+                    className={`${
+                      invoice.balance === 0
+                        ? 'bg-[#3f9c68]'
+                        : invoice.balance < 0
+                          ? 'bg-brand'
+                          : 'bg-[#c0453c]'
+                    } text-white px-5 py-4 rounded-[16px] flex justify-between items-center`}
+                  >
+                    <span className="text-[11px] font-bold uppercase tracking-wider">
+                      {invoice.balance < 0
+                        ? 'Change due'
+                        : invoice.balance === 0
+                          ? 'Paid in full'
+                          : 'Balance due'}
+                    </span>
+                    <span className="nums text-[17px] font-extrabold font-display">
+                      {invoice.balance < 0
+                        ? `-${currencySymbol}${money(Math.abs(invoice.balance))}`
+                        : `${currencySymbol}${money(invoice.balance)}`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Online tracking */}
+              <div className="border-t border-hairline pt-6 flex items-center justify-between gap-6">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-quill-soft block mb-2">
+                    Track online
+                  </span>
+                  <p className="text-[11px] text-quill leading-relaxed font-medium max-w-sm">
+                    Scan this QR code or visit the tracking page to check your invoice status anytime.
+                  </p>
+                </div>
+                <InvoiceQRCode invoiceId={invoice.id} size={104} />
+              </div>
+
+              {/* Contact footer */}
+              <div className="border-t border-hairline pt-5 flex flex-col md:flex-row justify-between items-center gap-3 text-[11px] text-quill font-semibold">
+                <div className="flex items-center gap-2">
+                  <Phone className="w-3.5 h-3.5 text-brand" />
+                  <span>{invoiceTemplate.contactPhone || '123-456-7890'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Mail className="w-3.5 h-3.5 text-brand" />
+                  <span>{invoiceTemplate.contactEmail || 'billing@finnova.com'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-brand" />
+                  <span>123 Anywhere St., Any City</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!invoice && (
+          <div className="bg-shell rounded-[28px] p-8 text-center shadow-[0_20px_60px_-30px_rgba(19,17,38,0.15)]">
+            <span className="w-14 h-14 rounded-2xl bg-[#fdeeea] flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-6 h-6 text-[#a8492f]" />
+            </span>
+            <h2 className="text-[18px] font-extrabold text-ink font-display">No Data Found</h2>
+            <p className="text-[13px] text-quill mt-2 max-w-sm mx-auto leading-relaxed font-medium">
+              No invoice or fishery data found for this reference number.
+            </p>
+            <button
+              onClick={goBack}
+              className="mt-6 bg-brand hover:bg-brand-mid text-white text-[12px] font-bold px-6 py-3 rounded-full transition-colors cursor-pointer"
+            >
+              Try Another Number
+            </button>
+          </div>
+        )}
+
+        <footer className="mt-8 text-center print:hidden">
+          <span className="text-[11px] font-semibold text-quill-soft">
+            FINNOVA © 2026 · Smart Finances, Better Business
+          </span>
+        </footer>
+      </div>
+    </div>
+  );
+}
