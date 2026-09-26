@@ -37,6 +37,7 @@ export default function Payment({ invoices, vendorInvoices, contacts, template, 
   const [historyHasMore, setHistoryHasMore] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [paymentPreview, setPaymentPreview] = useState<{ invoiceCount: number; outstanding: number } | null>(null);
+  const [paymentPreviewLoading, setPaymentPreviewLoading] = useState(false);
   const currencySymbol = getCurrencySymbol(template?.currency || 'PKR');
 
   const selectedContact = contacts.find((contact) => contact.id === contactId);
@@ -61,20 +62,23 @@ export default function Payment({ invoices, vendorInvoices, contacts, template, 
   }, [contactId, invoices, vendorInvoices]);
 
   const numericAmount = Math.max(0, Number(amount) || 0);
-  const outstanding = paymentPreview?.outstanding ?? contactInvoices.reduce((sum, invoice) => sum + invoice.balance, 0);
-  const unpaidInvoiceCount = paymentPreview?.invoiceCount ?? contactInvoices.length;
+  const outstanding = paymentPreview?.outstanding ?? 0;
+  const unpaidInvoiceCount = paymentPreview?.invoiceCount ?? 0;
   const plannedAllocation = Math.min(numericAmount, outstanding);
 
   useEffect(() => {
     if (!contactId) {
       setPaymentPreview(null);
+      setPaymentPreviewLoading(false);
       return;
     }
     let cancelled = false;
+    setPaymentPreview(null);
+    setPaymentPreviewLoading(true);
     apiRequest<{ invoiceCount: number; outstanding: number }>(`/api/payment-preview?contactId=${encodeURIComponent(contactId)}`)
-      .then((result) => { if (!cancelled) setPaymentPreview(result); })
-      .catch(() => { if (!cancelled) setPaymentPreview(null); });
-    return () => { cancelled = true; };
+      .then((result) => { if (!cancelled) { setPaymentPreview(result); setPaymentPreviewLoading(false); } })
+      .catch(() => { if (!cancelled) { setPaymentPreview(null); setPaymentPreviewLoading(false); } });
+    return () => { cancelled = true; setPaymentPreviewLoading(false); };
   }, [contactId]);
 
   const loadHistory = async (page = 1) => {
@@ -105,6 +109,7 @@ export default function Payment({ invoices, vendorInvoices, contacts, template, 
     setError('');
     setMessage('');
     if (!contactId) return setError('Select a contact from the search results.');
+    if (paymentPreviewLoading || !paymentPreview) return setError('Still loading this contact’s payment balance. Please try again in a moment.');
     if (numericAmount <= 0) return setError('Enter a payment amount greater than zero.');
     if (unpaidInvoiceCount === 0) return setError('This contact has no unpaid invoices.');
 
@@ -148,7 +153,7 @@ export default function Payment({ invoices, vendorInvoices, contacts, template, 
           <button type="submit" disabled={saving} className="inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-mid disabled:opacity-60 text-white text-[12px] font-bold px-5 py-3 rounded-xl cursor-pointer"><Save className="w-4 h-4" /> {saving ? 'Saving…' : 'Save payment'}</button>
         </form>
 
-        {selectedContact && <div className="mt-5 flex flex-wrap gap-4 text-[11px] text-white/65"><span>{selectedContact.type} · {selectedContact.fullName}</span><span>{unpaidInvoiceCount} unpaid invoice{unpaidInvoiceCount === 1 ? '' : 's'}</span><span>Outstanding: <strong className="text-white">{money(outstanding, currencySymbol)}</strong></span><span>Will allocate: <strong className="text-brand-soft">{money(plannedAllocation, currencySymbol)}</strong></span></div>}
+        {selectedContact && <div className="mt-5 flex flex-wrap gap-4 text-[11px] text-white/65"><span>{selectedContact.type} · {selectedContact.fullName}</span><span>{paymentPreviewLoading ? 'Loading unpaid invoices…' : `${unpaidInvoiceCount} unpaid invoice${unpaidInvoiceCount === 1 ? '' : 's'}`}</span><span>Outstanding: <strong className="text-white">{paymentPreviewLoading ? 'Loading…' : money(outstanding, currencySymbol)}</strong></span><span>Will allocate: <strong className="text-brand-soft">{paymentPreviewLoading ? 'Loading…' : money(plannedAllocation, currencySymbol)}</strong></span></div>}
         {message && <div className="mt-5 flex items-center gap-2 text-[12px] font-semibold text-[#9ee0b8]"><CheckCircle2 className="w-4 h-4" />{message}</div>}
         {error && <div className="mt-5 flex items-center gap-2 text-[12px] font-semibold text-[#ffb2a5]"><AlertCircle className="w-4 h-4" />{error}</div>}
       </section>
