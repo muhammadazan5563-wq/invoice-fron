@@ -32,7 +32,7 @@ const cellClass =
 const labelClass = 'block text-[10px] font-bold text-quill-soft uppercase tracking-wider mb-2';
 
 const money = (n: number) =>
-  n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  (Object.is(n, -0) ? 0 : n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 export default function InvoiceForm({ invoice, contacts, onSave, onCancel, suggestInvoiceId, template }: InvoiceFormProps) {
   const currencySymbol = getCurrencySymbol(template?.currency || 'USD');
