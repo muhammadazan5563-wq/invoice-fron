@@ -372,7 +372,7 @@ export default function InvoiceShowcase({
                   </span>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-semibold text-white/55">Tax</span>
+                  <span className="block text-[10px] font-semibold text-white/55">Commission</span>
                   <span className="nums block text-[15px] font-extrabold text-white mt-1">
                     {currencySymbol}{money(detail.taxAmount || 0)}
                   </span>
