@@ -27,6 +27,7 @@ import {
 } from '../lib/settings';
 import { getSpreadsheetInfo } from '../lib/sheets';
 import { refreshGoogleToken } from '../lib/auth';
+import { apiJson } from '../lib/api';
 
 interface SettingsProps {
   user: AppUser;
@@ -67,6 +68,7 @@ export default function Settings({ user, token, onClose, onSettingsSaved }: Sett
   const [contactEmail, setContactEmail] = useState('billing@finnova.com');
   const [contactAddress, setContactAddress] = useState('123 Anywhere St., Any City');
   const [tagline, setTagline] = useState('Smart Finances, Better Business');
+  const [fishSpeciesText, setFishSpeciesText] = useState('');
 
   // Load existing settings
   useEffect(() => {
@@ -104,6 +106,7 @@ export default function Settings({ user, token, onClose, onSettingsSaved }: Sett
         setContactEmail(tmpl.contactEmail || 'billing@finnova.com');
         setContactAddress(tmpl.contactAddress || '123 Anywhere St., Any City');
         setTagline(tmpl.tagline || 'Smart Finances, Better Business');
+        setFishSpeciesText((tmpl.fishSpecies || []).join(', '));
       } else {
         // Use defaults
         const tmpl = getTemplateWithDefaults(null);
@@ -115,6 +118,7 @@ export default function Settings({ user, token, onClose, onSettingsSaved }: Sett
         setContactEmail(tmpl.contactEmail || 'billing@finnova.com');
         setContactAddress(tmpl.contactAddress || '123 Anywhere St., Any City');
         setTagline(tmpl.tagline || 'Smart Finances, Better Business');
+        setFishSpeciesText((tmpl.fishSpecies || []).join(', '));
       }
     } catch (err: any) {
       console.error('Failed to load settings:', err);
@@ -127,13 +131,8 @@ export default function Settings({ user, token, onClose, onSettingsSaved }: Sett
   const getValidToken = async (): Promise<string> => {
     // Try the current token first by making a lightweight validation
     try {
-      const response = await fetch('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=' + encodeURIComponent(currentToken));
-      if (response.ok) {
-        const data = await response.json();
-        if (data.scope && data.scope.includes('spreadsheets')) {
-          return currentToken;
-        }
-      }
+      const data = await apiJson<{ scope?: string }>('/api/google/token-info', { accessToken: currentToken });
+      if (data.scope && data.scope.includes('spreadsheets')) return currentToken;
     } catch {
       // Token validation failed, try to refresh
     }
@@ -278,6 +277,7 @@ export default function Settings({ user, token, onClose, onSettingsSaved }: Sett
         contactEmail: contactEmail.trim(),
         contactAddress: contactAddress.trim(),
         tagline: tagline.trim(),
+        fishSpecies: [...new Set(fishSpeciesText.split(/[,\n]/).map((name) => name.trim()).filter(Boolean))],
       };
       await saveInvoiceTemplate(user.uid, template);
       // Keep the latest template available to the public Track view in this browser.
@@ -566,6 +566,20 @@ export default function Settings({ user, token, onClose, onSettingsSaved }: Sett
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Fish species catalog */}
+              <div className="space-y-3 border-t border-hairline pt-6">
+                <h2 className="text-base font-extrabold text-ink">Fish species catalog</h2>
+                <p className="text-xs text-quill">Add as many species as you need, separated by commas or new lines. They will appear as searchable suggestions when creating an invoice.</p>
+                <textarea
+                  value={fishSpeciesText}
+                  onChange={(e) => setFishSpeciesText(e.target.value)}
+                  rows={4}
+                  className="w-full bg-mist border border-hairline focus:bg-shell focus:bg-mist-2 rounded-xl px-4 py-3 text-ink placeholder:text-quill-soft focus:outline-none transition-all text-sm"
+                  placeholder="Rohu, Catla, Tuna"
+                />
+                <p className="text-xs text-quill-soft">{fishSpeciesText.split(/[,\n]/).map((name) => name.trim()).filter(Boolean).length} species ready to save.</p>
               </div>
 
               {/* Currency & Tax */}
