@@ -51,6 +51,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   const [subtotal, setSubtotal] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeSpeciesRow, setActiveSpeciesRow] = useState<number | null>(null);
 
   const defaultNotes =
     template?.paymentDetails || `Beneficiary: Bank of America\nSwift Sort\nAccount No.: 324 6654 7766 9992`;
@@ -66,6 +67,11 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
       .filter((contact) => `${contact.fullName} ${contact.email} ${contact.companyName}`.toLowerCase().includes(query))
       .slice(0, 8);
   }, [contactSearch, eligibleContacts]);
+  const savedSpecies = template?.fishSpecies || [];
+  const speciesMatches = (value: string) => {
+    const query = value.trim().toLowerCase();
+    return savedSpecies.filter((species) => !query || species.toLowerCase().includes(query)).slice(0, 8);
+  };
 
   const selectContact = (contact: Contact) => {
     setSelectedContactId(contact.id);
@@ -433,8 +439,8 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
             </button>
           </div>
 
-          <div className="bg-mist rounded-[20px] overflow-hidden">
-            <div className="overflow-x-auto">
+          <div className="bg-mist rounded-[20px] overflow-visible">
+            <div className="overflow-visible">
               <table className="w-full min-w-[900px] text-left border-collapse">
                 <thead>
                   <tr className="text-quill">
@@ -449,16 +455,33 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
                 <tbody>
                   {items.map((item, index) => (
                     <tr key={index} className="bg-shell border-t-4 border-mist">
-                      <td className="p-3">
-                        <input
-                          type="text"
-                          required
-                          aria-label={`Fish species for line ${index + 1}`}
-                          value={item.roomType}
-                          onChange={(e) => handleItemChange(index, 'roomType', e.target.value)}
-                          className={cellClass}
-                          placeholder="e.g. Deluxe suite"
-                        />
+                      <td className="p-3 relative z-50">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            required
+                            aria-label={`Fish species for line ${index + 1}`}
+                            value={item.roomType}
+                            onFocus={() => setActiveSpeciesRow(index)}
+                            onChange={(e) => { setActiveSpeciesRow(index); handleItemChange(index, 'roomType', e.target.value); }}
+                            onBlur={() => setTimeout(() => setActiveSpeciesRow(null), 150)}
+                            className={cellClass}
+                            placeholder="Search fish species"
+                          />
+                          {activeSpeciesRow === index && speciesMatches(item.roomType).length > 0 && (
+                            <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-shell rounded-xl shadow-xl border border-hairline overflow-hidden">
+                              {speciesMatches(item.roomType).map((species) => (
+                                <button
+                                  type="button"
+                                  key={species}
+                                  onMouseDown={(event) => event.preventDefault()}
+                                  onClick={() => { handleItemChange(index, 'roomType', species); setActiveSpeciesRow(null); }}
+                                  className="w-full text-left px-3 py-2.5 hover:bg-mist text-[12px] font-semibold text-ink"
+                                >{species}</button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="p-3">
                         <input
