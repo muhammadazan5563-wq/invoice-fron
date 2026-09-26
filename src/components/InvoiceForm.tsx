@@ -333,9 +333,8 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   const expenseTotal = invoiceType === 'customer' ? Object.values(expenses).reduce((sum, value) => sum + value, 0) : 0;
   const taxAmount = subtotal * taxRate / 100;
   const totalAmount = subtotal + taxAmount + expenseTotal;
-  const rawBalance = totalAmount - amountPaid;
-  const balance = rawBalance <= 0.01 ? 0 : Math.round(rawBalance * 100) / 100;
-  const isPaidInFull = balance === 0;
+  const isPaidInFull = totalAmount > 0 && amountPaid >= totalAmount - 0.01;
+  const balance = isPaidInFull ? 0 : Math.max(0, Math.round((totalAmount - amountPaid) * 100) / 100);
 
   const statusTone = (s: FormStatus, active: boolean) => {
     if (!active) return 'bg-mist text-quill hover:md:bg-mist-2';
