@@ -6,6 +6,9 @@ import InvoiceQRCode from './InvoiceQRCode';
 
 interface InvoiceListProps {
   invoices: Invoice[];
+  total?: number;
+  hasMore?: boolean;
+  onLoadMore?: () => Promise<void> | void;
   onEdit: (invoice: Invoice) => void;
   onDelete: (invoice: Invoice) => Promise<void>;
   onMarkAsPaid: (invoice: Invoice) => Promise<void>;
@@ -15,7 +18,7 @@ interface InvoiceListProps {
 const money = (n: number) =>
   (Object.is(n, -0) ? 0 : n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-export default function InvoiceList({ invoices, onEdit, onDelete, onMarkAsPaid, template }: InvoiceListProps) {
+export default function InvoiceList({ invoices, total, hasMore = false, onLoadMore, onEdit, onDelete, onMarkAsPaid, template }: InvoiceListProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -471,12 +474,15 @@ export default function InvoiceList({ invoices, onEdit, onDelete, onMarkAsPaid, 
 
           <div className="px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <span className="nums text-[11px] font-bold text-quill">
-              Showing {Math.min(visibleCount, filteredInvoices.length)} of {filteredInvoices.length}
+              Showing {Math.min(visibleCount, filteredInvoices.length)} of {total ?? filteredInvoices.length}
             </span>
-            {filteredInvoices.length > visibleCount && (
+            {(filteredInvoices.length > visibleCount || hasMore) && (
               <button
                 type="button"
-                onClick={() => setVisibleCount((prev) => prev + 50)}
+                onClick={() => {
+                  if (hasMore && onLoadMore) onLoadMore();
+                  else setVisibleCount((prev) => prev + 50);
+                }}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand hover:bg-brand-mid text-white font-bold px-5 py-2.5 rounded-full text-[11px] transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               >
                 <Plus className="w-3.5 h-3.5" />
