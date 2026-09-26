@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { AppUser } from '../lib/auth';
 import { Invoice } from '../types';
 import {
-  getInvoices,
-  getVendorInvoices,
+  getInvoicesPage,
   createInvoice,
   updateInvoice,
   deleteInvoice,
@@ -67,6 +66,12 @@ type ViewState = 'dashboard' | 'vendor-dashboard' | 'create' | 'edit' | 'setting
 export default function Dashboard({ user, token, onLogout, onTokenRefresh }: DashboardProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [vendorInvoices, setVendorInvoices] = useState<Invoice[]>([]);
+  const [invoiceTotal, setInvoiceTotal] = useState(0);
+  const [vendorInvoiceTotal, setVendorInvoiceTotal] = useState(0);
+  const [invoicePage, setInvoicePage] = useState(1);
+  const [vendorInvoicePage, setVendorInvoicePage] = useState(1);
+  const [hasMoreInvoices, setHasMoreInvoices] = useState(false);
+  const [hasMoreVendorInvoices, setHasMoreVendorInvoices] = useState(false);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedSql, setCopiedSql] = useState(false);
@@ -146,19 +151,27 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     }
   };
 
-  const fetchInvoices = async () => {
+  const fetchInvoices = async (append = false) => {
     setLoadingInvoices(true);
     setError(null);
     try {
-      const customerData = await getInvoices();
-      let vendorData: Invoice[] = [];
+      const nextCustomerPage = append ? invoicePage + 1 : 1;
+      const nextVendorPage = append ? vendorInvoicePage + 1 : 1;
+      const customerData = await getInvoicesPage({ page: nextCustomerPage, limit: 50, invoiceType: 'customer' });
+      let vendorData = { invoices: [] as Invoice[], total: 0, hasMore: false, page: nextVendorPage, limit: 50 };
       try {
-        vendorData = await getVendorInvoices();
+        vendorData = await getInvoicesPage({ page: nextVendorPage, limit: 50, invoiceType: 'vendor' });
       } catch (vendorError) {
         console.warn('Vendor invoices are unavailable:', vendorError);
       }
-      setInvoices(customerData);
-      setVendorInvoices(vendorData);
+      setInvoices((previous) => append ? [...previous, ...customerData.invoices] : customerData.invoices);
+      setVendorInvoices((previous) => append ? [...previous, ...vendorData.invoices] : vendorData.invoices);
+      setInvoicePage(nextCustomerPage);
+      setVendorInvoicePage(nextVendorPage);
+      setInvoiceTotal(customerData.total);
+      setVendorInvoiceTotal(vendorData.total);
+      setHasMoreInvoices(customerData.hasMore);
+      setHasMoreVendorInvoices(vendorData.hasMore);
       await fetchDashboardSummary();
     } catch (err: any) {
       setError(err.message || 'Failed to load invoices from Supabase.');
@@ -548,7 +561,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
 
             <button
               type="button"
-              onClick={fetchInvoices}
+              onClick={() => fetchInvoices()}
               disabled={loadingInvoices}
               title="Sync database"
               className="w-10 h-10 rounded-full bg-mist hover:bg-mist-2 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
@@ -835,6 +848,9 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
               </div>
               <InvoiceList
                 invoices={filteredInvoices}
+                total={invoiceTotal}
+                hasMore={hasMoreInvoices}
+                onLoadMore={() => fetchInvoices(true)}
                 onEdit={(inv) => {
                   setEditingInvoice(inv);
                   setViewState('edit');
@@ -850,7 +866,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         {viewState === 'vendor-dashboard' && (
           <div className="space-y-6 animate-fade-in" id="vendor-dashboard-panels">
             <KpiCards mode="vendor" invoices={vendorInvoices} summary={vendorDashboardSummary} currencySymbol={currencySymbol} workspaceImage={WORKSPACE_IMAGE} onOpenLedger={() => setViewState('ledger')} template={invoiceTemplate} onCreateInvoice={() => { setEditingInvoice(undefined); setViewState('create'); }} onSync={fetchInvoices} loadingSync={loadingInvoices} />
-            <InvoiceList invoices={vendorInvoices} onEdit={(invoice) => { setEditingInvoice(invoice); setViewState('edit'); }} onDelete={handleDeleteInvoice} onMarkAsPaid={handleMarkAsPaid} template={invoiceTemplate} />
+            <InvoiceList invoices={vendorInvoices} total={vendorInvoiceTotal} hasMore={hasMoreVendorInvoices} onLoadMore={() => fetchInvoices(true)} onEdit={(invoice) => { setEditingInvoice(invoice); setViewState('edit'); }} onDelete={handleDeleteInvoice} onMarkAsPaid={handleMarkAsPaid} template={invoiceTemplate} />
           </div>
         )}
 
