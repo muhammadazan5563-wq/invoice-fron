@@ -582,7 +582,7 @@ export default function Settings({ user, token, onClose, onSettingsSaved }: Sett
                 <p className="text-xs text-quill-soft">{fishSpeciesText.split(/[,\n]/).map((name) => name.trim()).filter(Boolean).length} species ready to save.</p>
               </div>
 
-              {/* Currency & Tax */}
+              {/* Currency & Commission */}
               <div className="space-y-6 border-t border-hairline pt-6">
                 <h2 className="text-base font-extrabold text-ink flex items-center gap-2">
                   <CreditCard className="w-5 h-5 text-emerald-500" /> Payment & Currency
@@ -633,7 +633,7 @@ export default function Settings({ user, token, onClose, onSettingsSaved }: Sett
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-quill uppercase tracking-wider mb-2">
-                      Tax Rate (%)
+                      Commission Rate (%)
                     </label>
                     <input
                       type="number"
