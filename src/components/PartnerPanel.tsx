@@ -14,8 +14,9 @@ import {
 import { Invoice } from '../types';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Session } from '../lib/auth';
-import { getInvoices, getVendorInvoices } from '../lib/invoices';
+import { getInvoicesPage } from '../lib/invoices';
 import { formatCurrency } from '../lib/settings';
+import { apiRequest } from '../lib/api';
 import InvoiceQRCode from './InvoiceQRCode';
 
 const BRAND_MARK =
@@ -35,6 +36,22 @@ const reloadCachesCleared = new Set<string>();
 
 const money = (value: number) => formatCurrency(value, CURRENCY);
 
+interface PartnerSummary {
+  totalInvoices: number;
+  totalRevenue: number;
+  totalPaid: number;
+  totalPending: number;
+  paidCount: number;
+  pendingCount: number;
+  overdueCount: number;
+  overdueAmount: number;
+  dueAmount: number;
+  averageInvoice: number;
+  todayCollection: number;
+  todayPaidCount: number;
+  todayPendingCount: number;
+}
+
 /**
  * Shared panel for vendors and customers. Read-only by design: it exposes only
  * a dashboard and the signed-in person's own invoices.
@@ -46,6 +63,7 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [summary, setSummary] = useState<PartnerSummary | null>(null);
   const [view, setView] = useState<PanelView>(() =>
     searchParams.get('panel') === 'invoices' ? 'invoices' : 'dashboard'
   );
@@ -63,6 +81,7 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
   const loadInvoices = async (forceRefresh = false) => {
     setLoading(true);
     setError('');
+    loadSummary();
 
     // A full browser refresh starts a new session and intentionally invalidates
     // this cache. SPA navigation (including Back from an invoice) keeps it.
@@ -82,8 +101,9 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
           const cached = JSON.parse(localStorage.getItem(invoiceCacheKey) || 'null') as {
             savedAt: number;
             invoices: Invoice[];
+            complete?: boolean;
           } | null;
-          if (cached && Date.now() - cached.savedAt < INVOICE_CACHE_TTL_MS) {
+          if (cached?.complete && Date.now() - cached.savedAt < INVOICE_CACHE_TTL_MS) {
             const customerId = (contact?.id || '').trim();
             setInvoices(customerId ? cached.invoices.filter((invoice) => invoice.customerId === customerId) : []);
             return;
@@ -94,11 +114,23 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
         }
       }
 
-      const all = role === 'vendor' ? await getVendorInvoices() : await getInvoices();
+      const all: Invoice[] = [];
+      let page = 1;
+      let hasMore = true;
+      while (hasMore) {
+        const result = await getInvoicesPage({
+          page,
+          limit: 300,
+          invoiceType: role === 'vendor' ? 'vendor' : 'customer',
+        });
+        all.push(...result.invoices);
+        hasMore = result.hasMore;
+        page += 1;
+      }
       const customerId = (contact?.id || '').trim();
 
       try {
-        localStorage.setItem(invoiceCacheKey, JSON.stringify({ savedAt: Date.now(), invoices: all }));
+        localStorage.setItem(invoiceCacheKey, JSON.stringify({ savedAt: Date.now(), invoices: all, complete: true }));
       } catch {
         // The panel remains functional if localStorage is full or unavailable.
       }
@@ -114,7 +146,17 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
     }
   };
 
-  const totals = useMemo(() => {
+  const loadSummary = async () => {
+    try {
+      const mode = role === 'vendor' ? 'vendor' : 'customer';
+      const nextSummary = await apiRequest<PartnerSummary>(`/api/dashboard/summary?mode=${mode}`);
+      setSummary(nextSummary);
+    } catch (err) {
+      console.warn('Could not load partner summary:', err);
+    }
+  };
+
+  const calculatedTotals = useMemo(() => {
     const billed = invoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
     const paid = invoices.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
     const outstanding = invoices.reduce(
@@ -124,6 +166,14 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
     const settled = invoices.filter((invoice) => invoice.balance <= 0).length;
     return { billed, paid, outstanding, settled };
   }, [invoices]);
+
+  const totals = {
+    billed: summary?.totalRevenue ?? calculatedTotals.billed,
+    paid: summary?.totalPaid ?? calculatedTotals.paid,
+    outstanding: summary?.totalPending ?? calculatedTotals.outstanding,
+    settled: summary?.paidCount ?? calculatedTotals.settled,
+    invoiceCount: summary?.totalInvoices ?? invoices.length,
+  };
 
   const visibleInvoices = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -284,7 +334,7 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
                   {money(totals.billed)}
                 </div>
                 <p className="text-[11px] text-quill font-semibold mt-3">
-                  Across {invoices.length} invoice{invoices.length === 1 ? '' : 's'}
+                  Across {totals.invoiceCount} invoice{totals.invoiceCount === 1 ? '' : 's'}
                 </p>
               </div>
 
@@ -305,7 +355,7 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
                   Invoices
                 </span>
                 <div className="nums text-[26px] font-extrabold text-white font-display mt-2.5 leading-none">
-                  {invoices.length}
+                  {totals.invoiceCount}
                 </div>
                 <button
                   type="button"
