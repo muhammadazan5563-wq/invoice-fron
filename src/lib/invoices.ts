@@ -2,34 +2,28 @@ import { Invoice } from '../types';
 import { apiRequest, apiJson } from './api';
 
 function rowToInvoice(row: any): Invoice {
-  const value = (camel: string, snake: string, fallback: any = '') => row[camel] ?? row[snake] ?? fallback;
-  const expenses = row.expenses || {
-    baraf: Number(value('baraf', 'baraf', 0)),
-    rickshawRent: Number(value('rickshawRent', 'rickshaw_rent', 0)),
-    workerExpense: Number(value('workerExpense', 'worker_expense', 0)),
-  };
   return {
     rowIndex: 0,
     id: row.id,
     date: row.date,
-    customerName: value('customerName', 'customer_name'),
-    customerId: value('customerId', 'customer_id'),
-    customerEmail: value('customerEmail', 'customer_email'),
-    customerPhone: value('customerPhone', 'customer_phone'),
-    totalAmount: Number(value('totalAmount', 'total_amount', 0)),
-    taxRate: Number(value('taxRate', 'tax_rate', 0)),
-    taxAmount: Number(value('taxAmount', 'tax_amount', 0)),
-    expenses: { baraf: Number(expenses.baraf || 0), rickshawRent: Number(expenses.rickshawRent || 0), workerExpense: Number(expenses.workerExpense || 0) },
-    expenseTotal: Number(value('expenseTotal', 'expense_total', 0)),
-    amountPaid: Number(value('amountPaid', 'amount_paid', 0)),
-    paymentDate: value('paymentDate', 'payment_date'),
-    balance: Number(value('balance', 'balance', 0)),
-    status: value('status', 'status', 'Pending'),
-    notes: value('notes', 'notes'),
+    customerName: row.customer_name || '',
+    customerId: row.customer_id || '',
+    customerEmail: row.customer_email || '',
+    customerPhone: row.customer_phone || '',
+    totalAmount: Number(row.total_amount || 0),
+    taxRate: Number(row.tax_rate || 0),
+    taxAmount: Number(row.tax_amount || 0),
+    expenses: { baraf: Number(row.baraf || 0), rickshawRent: Number(row.rickshaw_rent || 0), workerExpense: Number(row.worker_expense || 0) },
+    expenseTotal: Number(row.expense_total || 0),
+    amountPaid: Number(row.amount_paid || 0),
+    paymentDate: row.payment_date || '',
+    balance: Number(row.balance || 0),
+    status: row.status || 'Pending',
+    notes: row.notes || '',
     items: Array.isArray(row.items) ? row.items : [],
     payments: Array.isArray(row.payments) ? row.payments : [],
     rawRow: [],
-    invoiceType: row.invoiceType || row.invoice_type || 'customer',
+    invoiceType: row.invoice_type || 'customer',
   };
 }
 
@@ -76,7 +70,7 @@ export async function deleteInvoice(id: string, invoiceType: 'customer' | 'vendo
 
 export async function getVendorInvoices(): Promise<Invoice[]> {
   const rows = await apiRequest<any[]>('/api/invoices');
-  return (rows || []).filter((row) => (row.invoiceType || row.invoice_type) === 'vendor').map((row) => ({ ...rowToInvoice(row), invoiceType: 'vendor' }));
+  return (rows || []).filter((row) => row.invoice_type === 'vendor').map((row) => ({ ...rowToInvoice(row), invoiceType: 'vendor' }));
 }
 
 export async function getPublicInvoice(rawId: string): Promise<Invoice | null> {
