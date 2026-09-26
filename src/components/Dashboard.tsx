@@ -152,6 +152,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   };
 
   const fetchInvoices = async (append = false) => {
+    if (append && loadingInvoices) return;
     setLoadingInvoices(true);
     setError(null);
     try {
@@ -172,7 +173,9 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
       setVendorInvoiceTotal(vendorData.total);
       setHasMoreInvoices(customerData.hasMore);
       setHasMoreVendorInvoices(vendorData.hasMore);
-      await fetchDashboardSummary();
+      // Loading another invoice page must not refresh the dashboard summaries.
+      // Summary data is refreshed on the initial load and after mutations only.
+      if (!append) await fetchDashboardSummary();
     } catch (err: any) {
       setError(err.message || 'Failed to load invoices from Supabase.');
     } finally {
