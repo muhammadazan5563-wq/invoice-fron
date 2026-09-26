@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrencySymbol, getTemplateWithDefaults, InvoiceTemplate } from '../lib/settings';
+import { apiRequest } from '../lib/api';
 import {
   ArrowLeft,
   AlertCircle,
@@ -85,12 +86,7 @@ export default function InvoicePublicView() {
       try {
         // Invoice data is now the only source of truth. Do not make the old
         // Google Sheets request on the critical invoice-opening path.
-        const response = await fetch(`/api/public-invoice/${encodeURIComponent(invoiceId)}`);
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(body.error || 'Invoice not found');
-        }
-        setInvoice(await response.json());
+        setInvoice(await apiRequest<InvoiceRecord>(`/api/public-invoice/${encodeURIComponent(invoiceId)}`));
       } catch (err: any) {
         setError(err.message || 'Failed to load invoice');
       } finally {
