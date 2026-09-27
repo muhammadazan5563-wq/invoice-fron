@@ -47,6 +47,8 @@ const labelClass = 'block text-[10px] font-bold text-quill-soft uppercase tracki
 
 const thClass = 'py-4 px-5 text-[10px] font-bold text-quill uppercase tracking-wider';
 
+const displayLedgerInvoiceId = (invoice: Pick<LedgerInvoice, 'id' | 'invoice_id'>) => invoice.invoice_id || invoice.id.split('_')[0];
+
 async function fetchLedgerInvoicesForDate(date: string): Promise<Invoice[]> {
   const response = await apiRequest<{ invoices?: Invoice[] }>(`/api/invoices/ledger-date?date=${encodeURIComponent(date)}`);
   return (response.invoices || []).map((invoice) => ({
@@ -678,7 +680,7 @@ export default function Ledger({ template }: LedgerProps) {
                     <tr key={inv.id} className="bg-shell border-t-4 border-mist">
                       <td className="py-4 px-5">
                         <span className="nums text-[11px] font-bold text-brand bg-brand-pale px-2.5 py-1.5 rounded-full">
-                          #{inv.id}
+                          #{displayLedgerInvoiceId(inv)}
                         </span>
                       </td>
                       <td className="py-4 px-5 text-[12px] font-bold text-ink">{inv.guest_name}</td>
