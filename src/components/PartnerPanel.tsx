@@ -14,7 +14,7 @@ import {
 import { Invoice } from '../types';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Session } from '../lib/auth';
-import { getInvoicesPage } from '../lib/invoices';
+import { getInvoiceHistory } from '../lib/invoices';
 import { formatCurrency } from '../lib/settings';
 import { apiRequest } from '../lib/api';
 import InvoiceQRCode from './InvoiceQRCode';
@@ -48,6 +48,17 @@ interface PartnerSummary {
   todayPendingCount: number;
 }
 
+interface PartnerData {
+  invoices: Invoice[];
+  summary: PartnerSummary | null;
+}
+
+// App navigation unmounts this panel while an invoice is open. Keep the loaded
+// account in memory so Back returns instantly without another network request.
+// A browser refresh starts a new module and therefore still gets fresh data.
+const partnerDataCache = new Map<string, PartnerData>();
+const partnerDataRequests = new Map<string, Promise<PartnerData>>();
+
 /**
  * Shared panel for vendors and customers. Read-only by design: it exposes only
  * a dashboard and the signed-in person's own invoices.
@@ -72,41 +83,50 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contact?.id]);
 
-  const loadInvoices = async () => {
+  const loadInvoices = async (forceRefresh = false) => {
+    const customerId = (contact?.id || '').trim();
+    const invoiceType = role === 'vendor' ? 'vendor' : 'customer';
+    const cacheKey = `${invoiceType}:${customerId}`;
+
+    if (!customerId) {
+      setInvoices([]);
+      setSummary(null);
+      return;
+    }
+
+    const cached = partnerDataCache.get(cacheKey);
+    if (!forceRefresh && cached) {
+      setInvoices(cached.invoices);
+      setSummary(cached.summary);
+      setError('');
+      return;
+    }
+
     setLoading(true);
     setError('');
-    loadSummary();
 
     try {
-      const invoiceType = role === 'vendor' ? 'vendor' : 'customer';
-      const firstPage = await getInvoicesPage({ page: 1, limit: 600, invoiceType });
-      const totalPages = Math.ceil(firstPage.total / firstPage.limit);
-      const remainingPages = await Promise.all(
-        Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) =>
-          getInvoicesPage({ page: index + 2, limit: firstPage.limit, invoiceType })
-        )
-      );
-      const all = [firstPage, ...remainingPages].flatMap((page) => page.invoices);
-      const customerId = (contact?.id || '').trim();
+      let request = forceRefresh ? undefined : partnerDataRequests.get(cacheKey);
+      if (!request) {
+        request = Promise.all([
+          getInvoiceHistory(customerId, invoiceType),
+          apiRequest<PartnerSummary>(`/api/dashboard/summary?mode=${invoiceType}`),
+        ]).then(([history, nextSummary]) => ({
+          invoices: history.invoices,
+          summary: nextSummary,
+        }));
+        partnerDataRequests.set(cacheKey, request);
+      }
 
-      // Customer ID is the sole ownership key. Never fall back to name, phone, or email.
-      setInvoices(
-        customerId ? all.filter((invoice) => invoice.customerId === customerId) : []
-      );
+      const data = await request;
+      partnerDataCache.set(cacheKey, data);
+      setInvoices(data.invoices);
+      setSummary(data.summary);
     } catch (err: any) {
       setError(err?.message || 'Could not load your invoices right now.');
     } finally {
+      partnerDataRequests.delete(cacheKey);
       setLoading(false);
-    }
-  };
-
-  const loadSummary = async () => {
-    try {
-      const mode = role === 'vendor' ? 'vendor' : 'customer';
-      const nextSummary = await apiRequest<PartnerSummary>(`/api/dashboard/summary?mode=${mode}`);
-      setSummary(nextSummary);
-    } catch (err) {
-      console.warn('Could not load partner summary:', err);
     }
   };
 
@@ -219,7 +239,7 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
               <button
                 type="button"
                 onClick={() => {
-                  loadInvoices();
+                  loadInvoices(true);
                   setActionsOpen(false);
                 }}
                 disabled={loading}
