@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import {
   AlertCircle,
   ArrowUpRight,
@@ -9,14 +9,25 @@ import {
   Users,
 } from 'lucide-react';
 import { Session, initAuth, logout } from './lib/auth';
-import Dashboard from './components/Dashboard';
-import PartnerPanel from './components/PartnerPanel';
-import SignInModal from './components/SignInModal';
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const PartnerPanel = lazy(() => import('./components/PartnerPanel'));
+const SignInModal = lazy(() => import('./components/SignInModal'));
 
 const BRAND_MARK =
   'https://mgx-backend-cdn.metadl.com/generate/images/1500378/2026-08-01/tumdfoacajra/logo-finnova-n-mark.png';
 const WORKSPACE_IMAGE =
   'https://mgx-backend-cdn.metadl.com/generate/images/1500378/2026-08-01/tumdfbacajrq/card-workspace-desk-plant-lamp.png';
+
+function PanelLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-canvas" id="panel-loading">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-9 h-9 border-[3px] border-hairline border-t-brand rounded-full animate-spin" />
+        <p className="text-[12px] font-bold text-quill">Loading your workspace…</p>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -65,15 +76,9 @@ export default function App() {
 
   if (session) {
     if (session.role === 'admin') {
-      return (
-        <Dashboard
-          user={session.user}
-          token={session.accessToken || ''}
-          onLogout={handleLogout}
-        />
-      );
+      return <Suspense fallback={<PanelLoading />}><Dashboard user={session.user} token={session.accessToken || ''} onLogout={handleLogout} /></Suspense>;
     }
-    return <PartnerPanel session={session} onLogout={handleLogout} />;
+    return <Suspense fallback={<PanelLoading />}><PartnerPanel session={session} onLogout={handleLogout} /></Suspense>;
   }
 
   return (
@@ -270,15 +275,7 @@ export default function App() {
         </footer>
       </div>
 
-      <SignInModal
-        open={showSignIn}
-        onClose={() => setShowSignIn(false)}
-        onSignedIn={(nextSession) => {
-          setSession(nextSession);
-          setShowSignIn(false);
-          setNotice('');
-        }}
-      />
+      {showSignIn && <Suspense fallback={null}><SignInModal open={showSignIn} onClose={() => setShowSignIn(false)} onSignedIn={(nextSession) => { setSession(nextSession); setShowSignIn(false); setNotice(''); }} /></Suspense>}
     </div>
   );
 }
