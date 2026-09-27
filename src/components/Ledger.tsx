@@ -2,19 +2,19 @@ import { useState, useEffect } from 'react';
 import {
   getLedgerInvoices,
   getCashExpenses,
-  createLedgerInvoice,
-  createCashExpense,
   deleteLedgerInvoice,
   deleteCashExpense,
+  saveLedgerDay,
+  deleteLedgerDay,
   groupLedgerByDate,
   LedgerInvoice,
   CashExpense,
   LedgerEntry,
 } from '../lib/ledger';
-import { getInvoices } from '../lib/invoices';
+import { getLedgerInvoicesForDate } from '../lib/invoices';
 import { InvoiceTemplate, getUserSettings, getTemplateWithDefaults, getCurrencySymbol } from '../lib/settings';
 import { getTodayInTimezone } from '../lib/timezone';
-import { Invoice, PaymentRecord } from '../types';
+import { Invoice } from '../types';
 import {
   PlusCircle,
   BookOpen,
@@ -135,29 +135,7 @@ export default function Ledger({ template }: LedgerProps) {
 
   const fetchInvoicesForDate = async (date: string) => {
     try {
-      const invoices = await getInvoices();
-      const matchingInvoices: Invoice[] = [];
-
-      for (const inv of invoices) {
-        const paymentsArray: PaymentRecord[] = inv.payments || [];
-
-        if (paymentsArray.length > 0) {
-          const datePayments = paymentsArray.filter((p) => p.date === date);
-          if (datePayments.length > 0) {
-            const dateTotal = datePayments.reduce((sum, p) => sum + p.amount, 0);
-            matchingInvoices.push({ ...inv, totalAmount: dateTotal });
-          }
-        } else if (inv.paymentDate === date) {
-          matchingInvoices.push(inv);
-        }
-      }
-
-      matchingInvoices.sort((a, b) => {
-        const numA = parseInt(a.id.replace(/\D/g, '')) || 0;
-        const numB = parseInt(b.id.replace(/\D/g, '')) || 0;
-        return numA - numB;
-      });
-      setTodayInvoices(matchingInvoices);
+      setTodayInvoices(await getLedgerInvoicesForDate(date));
     } catch (err: any) {
       setError(err.message || 'Failed to load invoices');
     }
@@ -195,34 +173,26 @@ export default function Ledger({ template }: LedgerProps) {
     setSaving(true);
     setError(null);
     try {
-      const existingIds = new Set(allInvoices.map((inv) => String(inv.id)));
-
-      for (const inv of todayInvoices) {
-        const ledgerKey = `${inv.id}_${selectedDate}`;
-        if (existingIds.has(ledgerKey)) continue;
-        await createLedgerInvoice({
-          id: ledgerKey,
+      const existingEntry = ledgerEntries.find((e) => e.date === selectedDate);
+      const ledgerInvoices = todayInvoices.map((inv) => ({
+          id: `${inv.id}_${selectedDate}`,
+          invoice_id: inv.id,
+          ledger_date: selectedDate,
           guest_name: inv.customerName,
           hotel_name: inv.hotelName || '',
           total_amount: inv.totalAmount,
-        });
-      }
-
-      const existingEntry = ledgerEntries.find((e) => e.date === selectedDate);
-      if (existingEntry && existingEntry.expenses.length > 0) {
-        for (const exp of existingEntry.expenses) {
-          await deleteCashExpense(exp.id);
-        }
-      }
-
-      for (const exp of expenseEntries) {
-        await createCashExpense({
+        }));
+      await saveLedgerDay({
+        ledger_date: selectedDate,
+        invoices: ledgerInvoices,
+        deleteExpenseIds: existingEntry?.expenses.map((exp) => exp.id) || [],
+        expenses: expenseEntries.map((exp) => ({
           name: exp.name,
           amount: Number(exp.amount) || 0,
           description: exp.description,
           tag: exp.tag || 'expense',
-        });
-      }
+        })),
+      });
 
       await fetchLedgerData();
       setViewMode('list');
@@ -276,12 +246,7 @@ export default function Ledger({ template }: LedgerProps) {
 
   const handleDeleteEntireEntry = async (entry: LedgerEntry) => {
     try {
-      for (const inv of entry.invoices) {
-        await deleteLedgerInvoice(inv.id);
-      }
-      for (const exp of entry.expenses) {
-        await deleteCashExpense(exp.id);
-      }
+      await deleteLedgerDay(entry.date);
       await fetchLedgerData();
       setDeleteConfirm(null);
     } catch (err: any) {
