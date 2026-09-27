@@ -103,6 +103,13 @@ export async function getInvoiceHistory(contactId: string, invoiceType: 'custome
   return (response.invoices || []).map(rowToInvoice);
 }
 
+export interface ContactInvoiceSummary { billed: number; paid: number; outstanding: number; settled: number; overdue: number; invoiceCount: number }
+
+export async function getContactInvoiceSummary(contactId: string, invoiceType: 'customer' | 'vendor'): Promise<ContactInvoiceSummary> {
+  const params = new URLSearchParams({ customerId: contactId, invoiceType, _ts: String(Date.now()) });
+  return apiRequest<ContactInvoiceSummary>(`/api/contact-summary?${params.toString()}`, { cache: 'no-store' });
+}
+
 export async function getLedgerInvoicesForDate(date: string): Promise<Invoice[]> {
   const response = await apiRequest<{ invoices?: any[] }>(`/api/invoices/ledger-date?date=${encodeURIComponent(date)}`);
   return (response.invoices || []).map(rowToInvoice);
