@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AppUser } from '../lib/auth';
 import { Invoice } from '../types';
 import {
@@ -123,6 +123,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   } | null>(null);
 
   const postgresMigrationNote = 'PostgreSQL tables are created automatically by the Railway backend during startup. See backend/schema.sql.'
+  const invoiceRequestRef = useRef(0);
 
   const handleCopySql = () => {
     navigator.clipboard.writeText(postgresMigrationNote);
@@ -177,12 +178,13 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     vendorFilters = appliedVendorFilters,
   ) => {
     if (append && loadingInvoices) return;
+    const requestId = ++invoiceRequestRef.current;
     setLoadingInvoices(true);
     setError(null);
     try {
       const nextCustomerPage = append ? invoicePage + 1 : 1;
       const nextVendorPage = append ? vendorInvoicePage + 1 : 1;
-      const customerData = await getInvoicesPage({
+      const customerPromise = getInvoicesPage({
         page: nextCustomerPage,
         limit: 600,
         invoiceType: 'customer',
@@ -192,9 +194,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         toMonth: filters.toMonth || undefined,
         search: filters.search || undefined,
       });
-      let vendorData = { invoices: [] as Invoice[], total: 0, hasMore: false, page: nextVendorPage, limit: 600 };
-      try {
-        vendorData = await getInvoicesPage({
+      const vendorPromise = getInvoicesPage({
           page: nextVendorPage,
           limit: 600,
           invoiceType: 'vendor',
@@ -203,10 +203,12 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
           fromMonth: vendorFilters.fromMonth || undefined,
           toMonth: vendorFilters.toMonth || undefined,
           search: vendorFilters.search || undefined,
+        }).catch((vendorError) => {
+          console.warn('Vendor invoices are unavailable:', vendorError);
+          return { invoices: [] as Invoice[], total: 0, hasMore: false, page: nextVendorPage, limit: 600 };
         });
-      } catch (vendorError) {
-        console.warn('Vendor invoices are unavailable:', vendorError);
-      }
+      const [customerData, vendorData] = await Promise.all([customerPromise, vendorPromise]);
+      if (requestId !== invoiceRequestRef.current) return;
       setInvoices((previous) => append ? [...previous, ...customerData.invoices] : customerData.invoices);
       setVendorInvoices((previous) => append ? [...previous, ...vendorData.invoices] : vendorData.invoices);
       setInvoicePage(nextCustomerPage);
@@ -221,7 +223,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     } catch (err: any) {
       setError(err.message || 'Failed to load invoices from Supabase.');
     } finally {
-      setLoadingInvoices(false);
+      if (requestId === invoiceRequestRef.current) setLoadingInvoices(false);
     }
   };
 
