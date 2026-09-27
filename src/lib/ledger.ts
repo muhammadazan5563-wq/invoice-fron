@@ -1,5 +1,4 @@
 import { apiRequest, apiJson } from './api';
-
 export interface LedgerInvoice { id: string; invoice_id: string; ledger_date: string; guest_name: string; hotel_name: string; total_amount: number; created_at: string; }
 export interface CashExpense { id: number; name: string; amount: number; description: string; tag: string; created_at: string; }
 export interface LedgerEntry { date: string; invoices: LedgerInvoice[]; expenses: CashExpense[]; totalReceived: number; totalExpense: number; }
