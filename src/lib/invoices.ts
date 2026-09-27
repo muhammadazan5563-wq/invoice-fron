@@ -97,10 +97,11 @@ export async function getInvoicesPage(options: InvoicePageOptions = {}): Promise
   };
 }
 
-export async function getInvoiceHistory(contactId: string, invoiceType: 'customer' | 'vendor'): Promise<Invoice[]> {
+export async function getInvoiceHistory(contactId: string, invoiceType: 'customer' | 'vendor'): Promise<{ invoices: Invoice[]; summary: ContactInvoiceSummary }> {
   const params = new URLSearchParams({ customerId: contactId, invoiceType, _ts: String(Date.now()) });
-  const response = await apiRequest<{ invoices?: any[] }>(`/api/invoices/history?${params.toString()}`, { cache: 'no-store' });
-  return (response.invoices || []).map(rowToInvoice);
+  const response = await apiRequest<{ invoices?: any[]; summary?: ContactInvoiceSummary }>(`/api/invoices/history?${params.toString()}`, { cache: 'no-store' });
+  const invoices = (response.invoices || []).map(rowToInvoice);
+  return { invoices, summary: response.summary || { billed: 0, paid: 0, outstanding: 0, settled: 0, overdue: 0, invoiceCount: invoices.length } };
 }
 
 export interface ContactInvoiceSummary { billed: number; paid: number; outstanding: number; settled: number; overdue: number; invoiceCount: number }
