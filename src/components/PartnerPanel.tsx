@@ -30,10 +30,6 @@ interface PartnerPanelProps {
 type PanelView = 'dashboard' | 'invoices';
 
 const CURRENCY = 'PKR';
-const INVOICE_CACHE_TTL_MS = 10 * 60 * 1000;
-const INVOICE_CACHE_PREFIX = 'aqua-ledger:partner-invoices:';
-const reloadCachesCleared = new Set<string>();
-
 const money = (value: number) => formatCurrency(value, CURRENCY);
 
 interface PartnerSummary {
@@ -68,59 +64,27 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
     searchParams.get('panel') === 'invoices' ? 'invoices' : 'dashboard'
   );
   const [search, setSearch] = useState('');
-  const [visibleCount, setVisibleCount] = useState(50);
+  const [visibleCount, setVisibleCount] = useState(600);
   const [actionsOpen, setActionsOpen] = useState(false);
-
-  const invoiceCacheKey = `${INVOICE_CACHE_PREFIX}${role}:${contact?.id || 'unknown'}`;
 
   useEffect(() => {
     loadInvoices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contact?.id]);
 
-  const loadInvoices = async (forceRefresh = false) => {
+  const loadInvoices = async () => {
     setLoading(true);
     setError('');
     loadSummary();
 
-    // A full browser refresh starts a new session and intentionally invalidates
-    // this cache. SPA navigation (including Back from an invoice) keeps it.
-    const navigationEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-    if (navigationEntry?.type === 'reload' && !reloadCachesCleared.has(invoiceCacheKey)) {
-      try {
-        localStorage.removeItem(invoiceCacheKey);
-        reloadCachesCleared.add(invoiceCacheKey);
-      } catch {
-        // Storage can be unavailable in private/restricted browser contexts.
-      }
-    }
-
     try {
-      if (!forceRefresh) {
-        try {
-          const cached = JSON.parse(localStorage.getItem(invoiceCacheKey) || 'null') as {
-            savedAt: number;
-            invoices: Invoice[];
-            complete?: boolean;
-          } | null;
-          if (cached?.complete && Date.now() - cached.savedAt < INVOICE_CACHE_TTL_MS) {
-            const customerId = (contact?.id || '').trim();
-            setInvoices(customerId ? cached.invoices.filter((invoice) => invoice.customerId === customerId) : []);
-            return;
-          }
-          if (cached) localStorage.removeItem(invoiceCacheKey);
-        } catch {
-          // Ignore malformed/stale storage and fall back to the API.
-        }
-      }
-
       const all: Invoice[] = [];
       let page = 1;
       let hasMore = true;
       while (hasMore) {
         const result = await getInvoicesPage({
           page,
-          limit: 300,
+          limit: 600,
           invoiceType: role === 'vendor' ? 'vendor' : 'customer',
         });
         all.push(...result.invoices);
@@ -128,12 +92,6 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
         page += 1;
       }
       const customerId = (contact?.id || '').trim();
-
-      try {
-        localStorage.setItem(invoiceCacheKey, JSON.stringify({ savedAt: Date.now(), invoices: all, complete: true }));
-      } catch {
-        // The panel remains functional if localStorage is full or unavailable.
-      }
 
       // Customer ID is the sole ownership key. Never fall back to name, phone, or email.
       setInvoices(
@@ -265,7 +223,7 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
               <button
                 type="button"
                 onClick={() => {
-                  loadInvoices(true);
+                  loadInvoices();
                   setActionsOpen(false);
                 }}
                 disabled={loading}
@@ -552,8 +510,8 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
                 ))}
                 {visibleInvoices.length > visibleCount && (
                   <div className="flex justify-center pt-2">
-                    <button type="button" onClick={() => setVisibleCount((previous) => previous + 50)} className="inline-flex items-center gap-2 bg-brand hover:bg-brand-mid text-white text-[11px] font-bold px-5 py-2.5 rounded-full cursor-pointer">
-                      <RefreshCw className="w-3.5 h-3.5" /> Load 50 more
+                    <button type="button" onClick={() => setVisibleCount((previous) => previous + 600)} className="inline-flex items-center gap-2 bg-brand hover:bg-brand-mid text-white text-[11px] font-bold px-5 py-2.5 rounded-full cursor-pointer">
+                      <RefreshCw className="w-3.5 h-3.5" /> Load 600 more
                     </button>
                   </div>
                 )}
