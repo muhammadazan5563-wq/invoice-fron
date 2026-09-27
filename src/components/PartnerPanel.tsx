@@ -78,19 +78,15 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
     loadSummary();
 
     try {
-      const all: Invoice[] = [];
-      let page = 1;
-      let hasMore = true;
-      while (hasMore) {
-        const result = await getInvoicesPage({
-          page,
-          limit: 600,
-          invoiceType: role === 'vendor' ? 'vendor' : 'customer',
-        });
-        all.push(...result.invoices);
-        hasMore = result.hasMore;
-        page += 1;
-      }
+      const invoiceType = role === 'vendor' ? 'vendor' : 'customer';
+      const firstPage = await getInvoicesPage({ page: 1, limit: 600, invoiceType });
+      const totalPages = Math.ceil(firstPage.total / firstPage.limit);
+      const remainingPages = await Promise.all(
+        Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) =>
+          getInvoicesPage({ page: index + 2, limit: firstPage.limit, invoiceType })
+        )
+      );
+      const all = [firstPage, ...remainingPages].flatMap((page) => page.invoices);
       const customerId = (contact?.id || '').trim();
 
       // Customer ID is the sole ownership key. Never fall back to name, phone, or email.
