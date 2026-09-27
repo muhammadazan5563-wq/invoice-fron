@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { CalendarDays, CheckCircle2, Clock3, FileText, Printer, Search, UserRound, WalletCards, XCircle } from 'lucide-react';
 import { Contact } from '../lib/contacts';
-import { getInvoiceHistory } from '../lib/invoices';
+import { getContactInvoiceSummary, getInvoiceHistory, ContactInvoiceSummary } from '../lib/invoices';
 import { Invoice } from '../types';
 import { InvoiceTemplate, getCurrencySymbol } from '../lib/settings';
 import type { LucideIcon } from 'lucide-react';
@@ -21,6 +21,7 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
   const [contactSearch, setContactSearch] = useState('');
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [accountSummary, setAccountSummary] = useState<ContactInvoiceSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -47,10 +48,11 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
     setSearched(true);
     setLoading(true);
     try {
-      const all = await getInvoiceHistory(contact.id, contact.type === 'vendor' ? 'vendor' : 'customer');
-      if (requestId === historyRequestRef.current) setInvoices(all);
+      const invoiceType = contact.type === 'vendor' ? 'vendor' : 'customer';
+      const [all, summary] = await Promise.all([getInvoiceHistory(contact.id, invoiceType), getContactInvoiceSummary(contact.id, invoiceType)]);
+      if (requestId === historyRequestRef.current) { setInvoices(all); setAccountSummary(summary); }
     } catch {
-      if (requestId === historyRequestRef.current) setInvoices([]);
+      if (requestId === historyRequestRef.current) { setInvoices([]); setAccountSummary(null); }
     } finally {
       if (requestId === historyRequestRef.current) setLoading(false);
     }
@@ -131,12 +133,15 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
     setSearched(false);
   };
 
+  const displayedTotals = !appliedFilters.status && !appliedFilters.fromMonth && !appliedFilters.toMonth && !appliedFilters.search && accountSummary
+    ? accountSummary
+    : totals;
   const summaryCards: Array<[string, string, string, LucideIcon]> = [
-    ['Total billed', money(totals.billed, currencySymbol), 'bg-ink text-white', FileText],
-    ['Total paid', money(totals.paid, currencySymbol), 'bg-mist text-ink', CheckCircle2],
-    ['Outstanding', money(totals.outstanding, currencySymbol), 'bg-brand text-white', WalletCards],
-    ['Settled invoices', String(totals.settled), 'bg-mist text-ink', CheckCircle2],
-    ['Overdue', String(totals.overdue), 'bg-[#fff1ec] text-[#a8492f]', Clock3],
+    ['Total billed', money(displayedTotals.billed, currencySymbol), 'bg-ink text-white', FileText],
+    ['Total paid', money(displayedTotals.paid, currencySymbol), 'bg-mist text-ink', CheckCircle2],
+    ['Outstanding', money(displayedTotals.outstanding, currencySymbol), 'bg-brand text-white', WalletCards],
+    ['Settled invoices', String(displayedTotals.settled), 'bg-mist text-ink', CheckCircle2],
+    ['Overdue', String(displayedTotals.overdue), 'bg-[#fff1ec] text-[#a8492f]', Clock3],
   ];
 
   return (
