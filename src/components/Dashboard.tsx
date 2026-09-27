@@ -184,7 +184,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
       const nextVendorPage = append ? vendorInvoicePage + 1 : 1;
       const customerData = await getInvoicesPage({
         page: nextCustomerPage,
-        limit: 300,
+        limit: 600,
         invoiceType: 'customer',
         customerId: filters.customerId || undefined,
         status: filters.status || undefined,
@@ -192,11 +192,11 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         toMonth: filters.toMonth || undefined,
         search: filters.search || undefined,
       });
-      let vendorData = { invoices: [] as Invoice[], total: 0, hasMore: false, page: nextVendorPage, limit: 300 };
+      let vendorData = { invoices: [] as Invoice[], total: 0, hasMore: false, page: nextVendorPage, limit: 600 };
       try {
         vendorData = await getInvoicesPage({
           page: nextVendorPage,
-          limit: 300,
+          limit: 600,
           invoiceType: 'vendor',
           customerId: vendorFilters.customerId || undefined,
           status: vendorFilters.status || undefined,
