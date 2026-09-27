@@ -1,46 +1,151 @@
+import { Invoice } from '../types';
 import { apiRequest, apiJson } from './api';
 
-export interface LedgerInvoice { id: string; invoice_id: string; ledger_date: string; guest_name: string; hotel_name: string; total_amount: number; created_at: string; }
-export interface CashExpense { id: number; name: string; amount: number; description: string; tag: string; created_at: string; }
-export interface LedgerEntry { date: string; invoices: LedgerInvoice[]; expenses: CashExpense[]; totalReceived: number; totalExpense: number; }
-
-export async function getLedgerInvoices(): Promise<LedgerInvoice[]> {
-  const data = await apiRequest<LedgerInvoice[]>('/api/ledger-invoices');
-  return (data || []).map((row) => ({ ...row, total_amount: Number(row.total_amount || 0) }));
-}
-export async function getCashExpenses(): Promise<CashExpense[]> {
-  const data = await apiRequest<CashExpense[]>('/api/cash-expenses');
-  return (data || []).map((row) => ({ ...row, amount: Number(row.amount || 0) }));
-}
-export async function createCashExpense(expense: Omit<CashExpense, 'id' | 'created_at'>): Promise<void> { await apiJson('/api/cash-expenses', expense); }
-export async function deleteLedgerInvoice(id: string): Promise<void> { await apiRequest(`/api/ledger-invoices/${encodeURIComponent(id)}`, { method: 'DELETE' }); }
-export async function deleteCashExpense(id: number): Promise<void> { await apiRequest(`/api/cash-expenses/${encodeURIComponent(String(id))}`, { method: 'DELETE' }); }
-export async function saveLedgerDay(payload: { ledger_date: string; invoices: Array<Omit<LedgerInvoice, 'created_at'>>; deleteExpenseIds: number[]; expenses: Array<Omit<CashExpense, 'id' | 'created_at'>> }): Promise<void> {
-  await apiJson('/api/ledger/bulk', payload);
-}
-export async function deleteLedgerDay(ledgerDate: string): Promise<void> {
-  await apiRequest('/api/ledger/bulk', { method: 'DELETE', body: JSON.stringify({ ledger_date: ledgerDate }) });
+export interface InvoicePage {
+  invoices: Invoice[];
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
 }
 
-function toDateInTimezone(utcDateStr: string, timezone = 'UTC'): string {
-  try { return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(utcDateStr)); }
-  catch { return new Date(utcDateStr).toISOString().split('T')[0]; }
+export interface InvoicePageOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  customerId?: string;
+  fromMonth?: string;
+  toMonth?: string;
+  invoiceType?: 'customer' | 'vendor';
 }
 
-export function groupLedgerByDate(invoices: LedgerInvoice[], expenses: CashExpense[], timezone = 'UTC'): LedgerEntry[] {
-  const dateMap = new Map<string, LedgerEntry>();
-  invoices.forEach((inv) => {
-    const date = inv.ledger_date || inv.id.match(/_(\d{4}-\d{2}-\d{2})$/)?.[1] || toDateInTimezone(inv.created_at, timezone);
-    if (!dateMap.has(date)) dateMap.set(date, { date, invoices: [], expenses: [], totalReceived: 0, totalExpense: 0 });
-    const entry = dateMap.get(date)!;
-    entry.invoices.push(inv); entry.totalReceived += inv.total_amount;
-  });
-  expenses.forEach((exp) => {
-    const date = toDateInTimezone(exp.created_at, timezone);
-    if (!dateMap.has(date)) dateMap.set(date, { date, invoices: [], expenses: [], totalReceived: 0, totalExpense: 0 });
-    const entry = dateMap.get(date)!;
-    entry.expenses.push(exp);
-    if (exp.tag === 'cash') entry.totalReceived += exp.amount; else entry.totalExpense += exp.amount;
-  });
-  return Array.from(dateMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+function rowToInvoice(row: any): Invoice {
+  const value = (camel: string, snake: string, fallback: any = '') => row[camel] ?? row[snake] ?? fallback;
+  const expenses = row.expenses || {
+    baraf: Number(value('baraf', 'baraf', 0)),
+    rickshawRent: Number(value('rickshawRent', 'rickshaw_rent', 0)),
+    workerExpense: Number(value('workerExpense', 'worker_expense', 0)),
+  };
+  return {
+    rowIndex: 0,
+    id: row.id,
+    date: row.date,
+    customerName: value('customerName', 'customer_name'),
+    customerId: value('customerId', 'customer_id'),
+    customerEmail: value('customerEmail', 'customer_email'),
+    customerPhone: value('customerPhone', 'customer_phone'),
+    totalAmount: Number(value('totalAmount', 'total_amount', 0)),
+    taxRate: Number(value('taxRate', 'tax_rate', 0)),
+    taxAmount: Number(value('taxAmount', 'tax_amount', 0)),
+    expenses: { baraf: Number(expenses.baraf || 0), rickshawRent: Number(expenses.rickshawRent || 0), workerExpense: Number(expenses.workerExpense || 0) },
+    expenseTotal: Number(value('expenseTotal', 'expense_total', 0)),
+    amountPaid: Number(value('amountPaid', 'amount_paid', 0)),
+    paymentDate: value('paymentDate', 'payment_date'),
+    balance: Number(value('balance', 'balance', 0)),
+    status: value('status', 'status', 'Pending'),
+    notes: value('notes', 'notes'),
+    items: Array.isArray(row.items) ? row.items : [],
+    payments: Array.isArray(row.payments) ? row.payments : [],
+    rawRow: [],
+    invoiceType: row.invoiceType || row.invoice_type || 'customer',
+  };
+}
+
+function invoiceToRow(invoice: Omit<Invoice, 'rowIndex' | 'rawRow'>) {
+  return {
+    id: invoice.id,
+    date: invoice.date,
+    customerName: invoice.customerName,
+    customerId: invoice.customerId || '',
+    customerEmail: invoice.customerEmail || '',
+    customerPhone: invoice.customerPhone || '',
+    totalAmount: Number(invoice.totalAmount || 0),
+    taxRate: Number(invoice.taxRate || 0),
+    taxAmount: Number(invoice.taxAmount || 0),
+    expenses: invoice.expenses || { baraf: 0, rickshawRent: 0, workerExpense: 0 },
+    expenseTotal: Number(invoice.expenseTotal || 0),
+    amountPaid: Number(invoice.amountPaid || 0),
+    paymentDate: invoice.paymentDate || '',
+    balance: Number(invoice.balance || 0),
+    status: invoice.status || 'Pending',
+    notes: invoice.notes || '',
+    items: invoice.items || [],
+    payments: invoice.payments || [],
+    invoiceType: invoice.invoiceType || 'customer',
+  };
+}
+
+export async function getInvoicesPage(options: InvoicePageOptions = {}): Promise<InvoicePage> {
+  const params = new URLSearchParams();
+  params.set('page', String(Math.max(1, options.page || 1)));
+  params.set('limit', String(Math.min(600, Math.max(1, options.limit || 600))));
+  if (options.search?.trim()) params.set('search', options.search.trim());
+  if (options.status && options.status !== 'All') params.set('status', options.status);
+  if (options.customerId) params.set('customerId', options.customerId);
+  if (options.fromMonth) params.set('fromMonth', options.fromMonth);
+  if (options.toMonth) params.set('toMonth', options.toMonth);
+  if (options.invoiceType) params.set('invoiceType', options.invoiceType);
+  const response = await apiRequest<any>(`/api/invoices?${params.toString()}`);
+  const rows = Array.isArray(response) ? response : response?.invoices || [];
+  return {
+    invoices: rows.map(rowToInvoice),
+    page: Number(response?.page || options.page || 1),
+    limit: Number(response?.limit || options.limit || 600),
+    total: Number(response?.total ?? rows.length),
+    hasMore: Boolean(response?.hasMore ?? rows.length === (options.limit || 600)),
+  };
+}
+
+export async function getInvoiceHistory(contactId: string, invoiceType: 'customer' | 'vendor'): Promise<Invoice[]> {
+  const params = new URLSearchParams({ customerId: contactId, invoiceType });
+  const response = await apiRequest<{ invoices?: any[] }>(`/api/invoices/history?${params.toString()}`);
+  return (response.invoices || []).map(rowToInvoice);
+}
+
+export async function getLedgerInvoicesForDate(date: string): Promise<Invoice[]> {
+  const response = await apiRequest<{ invoices?: any[] }>(`/api/invoices/ledger-date?date=${encodeURIComponent(date)}`);
+  return (response.invoices || []).map(rowToInvoice);
+}
+
+// Kept for secondary views that need a bounded page but do not yet expose controls.
+export async function getInvoices(): Promise<Invoice[]> {
+  return (await getInvoicesPage()).invoices;
+}
+
+export async function createInvoice(invoice: Omit<Invoice, 'rowIndex' | 'rawRow'>): Promise<void> {
+  await apiJson('/api/invoices', invoiceToRow(invoice));
+}
+
+export async function updateInvoice(id: string, invoice: Omit<Invoice, 'rowIndex' | 'rawRow'>): Promise<void> {
+  await apiJson(`/api/invoices/${encodeURIComponent(id)}`, invoiceToRow(invoice), 'PUT');
+}
+
+export async function deleteInvoice(id: string, invoiceType: 'customer' | 'vendor' = 'customer'): Promise<void> {
+  await apiRequest(`/api/invoices/${encodeURIComponent(id)}?invoiceType=${encodeURIComponent(invoiceType)}`, { method: 'DELETE' });
+}
+
+export async function getVendorInvoices(): Promise<Invoice[]> {
+  return (await getInvoicesPage({ invoiceType: 'vendor' })).invoices;
+}
+
+export async function getPublicInvoice(rawId: string): Promise<Invoice | null> {
+  try {
+    const row = await apiRequest<any>(`/api/public-invoice/${encodeURIComponent(rawId)}`);
+    return rowToInvoice(row);
+  } catch (error: any) {
+    if (error?.message === 'Invoice not found') return null;
+    throw error;
+  }
+}
+
+export async function syncBookingToSheet(
+  invoiceId: string,
+  customerName: string,
+  items: Array<{ checkIn: string; checkOut: string; nights: number; quantity: number; roomType: string }>,
+  spreadsheetId: string,
+  sheetName: string,
+  accessToken: string
+): Promise<{ success: boolean; rowsAdded: number; startId: number }> {
+  return apiJson('/api/sync-booking-sheet', { invoiceId, customerName, items, spreadsheetId, sheetName, accessToken });
 }
