@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { CalendarDays, CheckCircle2, Clock3, FileText, Printer, Search, UserRound, WalletCards, XCircle } from 'lucide-react';
 import { Contact } from '../lib/contacts';
-import { getInvoicesPage } from '../lib/invoices';
+import { getInvoiceHistory } from '../lib/invoices';
 import { Invoice } from '../types';
 import { InvoiceTemplate, getCurrencySymbol } from '../lib/settings';
 import type { LucideIcon } from 'lucide-react';
@@ -28,6 +28,7 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
   const [toDate, setToDate] = useState('');
   const [invoiceQuery, setInvoiceQuery] = useState('');
   const [appliedFilters, setAppliedFilters] = useState({ customerId: '', status: '', fromMonth: '', toMonth: '', search: '' });
+  const historyRequestRef = useRef(0);
   const currencySymbol = getCurrencySymbol(template?.currency || 'PKR');
 
   const matches = useMemo(() => {
@@ -40,30 +41,18 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
   }, [contactSearch, contactType, contacts, selectedContact]);
 
   const chooseContact = async (contact: Contact) => {
+    const requestId = ++historyRequestRef.current;
     setSelectedContact(contact);
     setContactSearch(contact.fullName);
     setSearched(true);
     setLoading(true);
     try {
-      const all: Invoice[] = [];
-      let page = 1;
-      let hasMore = true;
-      while (hasMore) {
-        const result = await getInvoicesPage({
-          page,
-          limit: 300,
-          invoiceType: contact.type === 'vendor' ? 'vendor' : 'customer',
-          customerId: contact.id,
-        });
-        all.push(...result.invoices);
-        hasMore = result.hasMore;
-        page += 1;
-      }
-      setInvoices(all);
+      const all = await getInvoiceHistory(contact.id, contact.type === 'vendor' ? 'vendor' : 'customer');
+      if (requestId === historyRequestRef.current) setInvoices(all);
     } catch {
-      setInvoices([]);
+      if (requestId === historyRequestRef.current) setInvoices([]);
     } finally {
-      setLoading(false);
+      if (requestId === historyRequestRef.current) setLoading(false);
     }
   };
 
