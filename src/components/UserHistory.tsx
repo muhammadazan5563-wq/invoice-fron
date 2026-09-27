@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { CalendarDays, CheckCircle2, Clock3, FileText, Printer, Search, UserRound, WalletCards, XCircle } from 'lucide-react';
 import { Contact } from '../lib/contacts';
-import { getContactInvoiceSummary, getInvoiceHistory, ContactInvoiceSummary } from '../lib/invoices';
+import { getInvoiceHistory, ContactInvoiceSummary } from '../lib/invoices';
 import { Invoice } from '../types';
 import { InvoiceTemplate, getCurrencySymbol } from '../lib/settings';
 import type { LucideIcon } from 'lucide-react';
@@ -49,8 +49,8 @@ export default function UserHistory({ contacts, template }: UserHistoryProps) {
     setLoading(true);
     try {
       const invoiceType = contact.type === 'vendor' ? 'vendor' : 'customer';
-      const [all, summary] = await Promise.all([getInvoiceHistory(contact.id, invoiceType), getContactInvoiceSummary(contact.id, invoiceType)]);
-      if (requestId === historyRequestRef.current) { setInvoices(all); setAccountSummary(summary); }
+      const result = await getInvoiceHistory(contact.id, invoiceType);
+      if (requestId === historyRequestRef.current) { setInvoices(result.invoices); setAccountSummary(result.summary); }
     } catch {
       if (requestId === historyRequestRef.current) { setInvoices([]); setAccountSummary(null); }
     } finally {
