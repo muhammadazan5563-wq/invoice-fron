@@ -11,7 +11,7 @@ import {
   CashExpense,
   LedgerEntry,
 } from '../lib/ledger';
-import { getLedgerInvoicesForDate } from '../lib/invoices';
+import { apiRequest } from '../lib/api';
 import { InvoiceTemplate, getUserSettings, getTemplateWithDefaults, getCurrencySymbol } from '../lib/settings';
 import { getTodayInTimezone } from '../lib/timezone';
 import { Invoice } from '../types';
@@ -46,6 +46,16 @@ const fieldClass =
 const labelClass = 'block text-[10px] font-bold text-quill-soft uppercase tracking-wider mb-2';
 
 const thClass = 'py-4 px-5 text-[10px] font-bold text-quill uppercase tracking-wider';
+
+async function fetchLedgerInvoicesForDate(date: string): Promise<Invoice[]> {
+  const response = await apiRequest<{ invoices?: Invoice[] }>(`/api/invoices/ledger-date?date=${encodeURIComponent(date)}`);
+  return (response.invoices || []).map((invoice) => ({
+    ...invoice,
+    totalAmount: Number(invoice.totalAmount || 0),
+    amountPaid: Number(invoice.amountPaid || 0),
+    balance: Number(invoice.balance || 0),
+  }));
+}
 
 export default function Ledger({ template }: LedgerProps) {
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
@@ -135,7 +145,7 @@ export default function Ledger({ template }: LedgerProps) {
 
   const fetchInvoicesForDate = async (date: string) => {
     try {
-      setTodayInvoices(await getLedgerInvoicesForDate(date));
+      setTodayInvoices(await fetchLedgerInvoicesForDate(date));
     } catch (err: any) {
       setError(err.message || 'Failed to load invoices');
     }
