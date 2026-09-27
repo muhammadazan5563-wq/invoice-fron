@@ -98,8 +98,13 @@ export async function getInvoicesPage(options: InvoicePageOptions = {}): Promise
 }
 
 export async function getInvoiceHistory(contactId: string, invoiceType: 'customer' | 'vendor'): Promise<Invoice[]> {
-  const params = new URLSearchParams({ customerId: contactId, invoiceType });
-  const response = await apiRequest<{ invoices?: any[] }>(`/api/invoices/history?${params.toString()}`);
+  const params = new URLSearchParams({ customerId: contactId, invoiceType, _ts: String(Date.now()) });
+  const response = await apiRequest<{ invoices?: any[] }>(`/api/invoices/history?${params.toString()}`, { cache: 'no-store' });
+  return (response.invoices || []).map(rowToInvoice);
+}
+
+export async function getLedgerInvoicesForDate(date: string): Promise<Invoice[]> {
+  const response = await apiRequest<{ invoices?: any[] }>(`/api/invoices/ledger-date?date=${encodeURIComponent(date)}`);
   return (response.invoices || []).map(rowToInvoice);
 }
 
