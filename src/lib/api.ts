@@ -1,6 +1,8 @@
 const configuredApiUrl = (import.meta as any).env?.VITE_API_URL || '';
 
-export const API_BASE_URL = configuredApiUrl.replace(/\/$/, '');
+// Production uses relative /api URLs so Vercel can proxy them to Railway.
+// Local development can still use VITE_API_URL for the separate backend.
+export const API_BASE_URL = (import.meta as any).env?.DEV ? configuredApiUrl.replace(/\/$/, '') : '';
 
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers || {});
