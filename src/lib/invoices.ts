@@ -79,7 +79,7 @@ function invoiceToRow(invoice: Omit<Invoice, 'rowIndex' | 'rawRow'>) {
 export async function getInvoicesPage(options: InvoicePageOptions = {}): Promise<InvoicePage> {
   const params = new URLSearchParams();
   params.set('page', String(Math.max(1, options.page || 1)));
-  params.set('limit', String(Math.min(300, Math.max(1, options.limit || 300))));
+  params.set('limit', String(Math.min(600, Math.max(1, options.limit || 600))));
   if (options.search?.trim()) params.set('search', options.search.trim());
   if (options.status && options.status !== 'All') params.set('status', options.status);
   if (options.customerId) params.set('customerId', options.customerId);
@@ -91,10 +91,16 @@ export async function getInvoicesPage(options: InvoicePageOptions = {}): Promise
   return {
     invoices: rows.map(rowToInvoice),
     page: Number(response?.page || options.page || 1),
-    limit: Number(response?.limit || options.limit || 300),
+    limit: Number(response?.limit || options.limit || 600),
     total: Number(response?.total ?? rows.length),
-    hasMore: Boolean(response?.hasMore ?? rows.length === (options.limit || 300)),
+    hasMore: Boolean(response?.hasMore ?? rows.length === (options.limit || 600)),
   };
+}
+
+export async function getInvoiceHistory(contactId: string, invoiceType: 'customer' | 'vendor'): Promise<Invoice[]> {
+  const params = new URLSearchParams({ customerId: contactId, invoiceType });
+  const response = await apiRequest<{ invoices?: any[] }>(`/api/invoices/history?${params.toString()}`);
+  return (response.invoices || []).map(rowToInvoice);
 }
 
 // Kept for secondary views that need a bounded page but do not yet expose controls.
