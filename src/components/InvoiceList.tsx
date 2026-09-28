@@ -342,9 +342,9 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
         </div>
       </div>
 
-      <div className={`grid grid-cols-1 gap-5 ${selectedInvoice ? 'xl:grid-cols-3' : ''} ${hideList ? 'hidden' : ''}`}>
+      <div className={`grid grid-cols-1 gap-5 ${selectedInvoice ? 'xl:grid-cols-3' : ''}`}>
         {/* Ledger table */}
-        <div className={`bg-mist rounded-[22px] overflow-hidden ${selectedInvoice ? 'xl:col-span-1' : ''}`}>
+        <div className={`bg-mist rounded-[22px] overflow-hidden ${selectedInvoice ? 'xl:col-span-1' : ''} ${hideList ? 'hidden' : ''}`}>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
