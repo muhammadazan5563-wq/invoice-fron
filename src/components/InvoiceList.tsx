@@ -169,7 +169,7 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
               }
             </script>
             <style>
-              @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;300;700;800&family=Urbanist:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+              @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Urbanist:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
 
               body {
                 font-family: 'Manrope', sans-serif;
