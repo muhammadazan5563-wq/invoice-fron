@@ -378,7 +378,7 @@ export default function InvoiceShowcase({
                     {currencySymbol}{money(detail.taxAmount || 0)}
                   </span>
                 </div>
-                {detail.invoiceType !== 'vendor' && (
+                {detail.invoiceType === 'vendor' && (
                   <div>
                     <span className="block text-[10px] font-semibold text-white/55">Expenses</span>
                     <span className="nums block text-[15px] font-extrabold text-white mt-1">
