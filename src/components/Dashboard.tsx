@@ -1017,6 +1017,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
               setViewState('edit');
             }}
             onDelete={handleDeleteInvoice}
+            onMarkAsPaid={handleMarkAsPaid}
           />
         )}
 
