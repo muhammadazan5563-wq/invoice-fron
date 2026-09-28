@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrencySymbol, getTemplateWithDefaults, InvoiceTemplate } from '../lib/settings';
 import { apiRequest } from '../lib/api';
+import { getInvoiceGrossAmount } from '../lib/invoice-calculations';
 import {
   ArrowLeft,
   AlertCircle,
@@ -148,6 +149,7 @@ export default function InvoicePublicView() {
   }
 
   const isPaid = invoice ? invoice.balance <= 0 : false;
+  const grossAmount = invoice ? getInvoiceGrossAmount(invoice) : 0;
 
   return (
     <div className="min-h-screen bg-canvas px-3 sm:px-5 py-4 sm:py-6 print:bg-white print:p-0">
@@ -294,13 +296,21 @@ export default function InvoicePublicView() {
                 {/* Totals */}
                 <div className="space-y-3.5">
                   <div className="flex justify-between items-center">
-                    <span className="text-[12px] font-semibold text-quill">Total amount</span>
-                    <span className="nums text-[17px] font-extrabold text-ink font-display">
-                      {currencySymbol}{money(invoice.totalAmount)}
-                    </span>
+                    <span className="text-[12px] font-semibold text-quill">Gross amount</span>
+                    <span className="nums text-[15px] font-bold text-ink">{currencySymbol}{money(grossAmount)}</span>
                   </div>
-                  {!!invoice.taxAmount && <div className="flex justify-between items-center text-[12px] font-semibold text-quill"><span>Commission {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</span><span className="nums">{currencySymbol}{money(invoice.taxAmount)}</span></div>}
-
+                  <div className="flex justify-between items-center text-[12px] font-semibold text-quill">
+                    <span>Commission {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</span>
+                    <span className="nums">{currencySymbol}{money(invoice.taxAmount || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[12px] font-semibold text-quill">
+                    <span>Expenses</span>
+                    <span className="nums">{currencySymbol}{money(invoice.expenseTotal || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-3 border-t border-hairline">
+                    <span className="text-[12px] font-bold text-quill">Total amount</span>
+                    <span className="nums text-[17px] font-extrabold text-ink font-display">{currencySymbol}{money(invoice.totalAmount)}</span>
+                  </div>
                   <div className="flex justify-between items-start pt-3 border-t border-hairline">
                     <span className="text-[12px] font-semibold text-quill">Amount paid</span>
                     <div className="text-right">
