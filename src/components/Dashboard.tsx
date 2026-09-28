@@ -124,6 +124,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
 
   const postgresMigrationNote = 'PostgreSQL tables are created automatically by the Railway backend during startup. See backend/schema.sql.'
   const invoiceRequestRef = useRef(0);
+  const summaryRequestRef = useRef(0);
 
   const handleCopySql = () => {
     navigator.clipboard.writeText(postgresMigrationNote);
@@ -142,6 +143,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   }, [invoiceTemplate?.timezone]);
 
   const fetchDashboardSummary = async () => {
+    const requestId = ++summaryRequestRef.current;
     try {
       const date = getTodayInTimezone(invoiceTemplate?.timezone || 'UTC');
       const query = `date=${encodeURIComponent(date)}`;
@@ -149,6 +151,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         apiRequest<DashboardSummary>(`/api/dashboard/summary?${query}&mode=customer`),
         apiRequest<DashboardSummary>(`/api/dashboard/summary?${query}&mode=vendor`),
       ]);
+      if (requestId !== summaryRequestRef.current) return;
       setDashboardSummary(customerSummary);
       setVendorDashboardSummary(vendorSummary);
     } catch (err) {
@@ -277,6 +280,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         }
         setViewState('dashboard');
         setEditingInvoice(undefined);
+        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
       } catch (err: any) {
         setError(`Failed to save invoice: ${err.message}`);
       } finally {
@@ -309,7 +313,12 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         customerName: invoice.customerName,
         customerId: invoice.customerId,
         customerEmail: invoice.customerEmail,
+        customerPhone: invoice.customerPhone,
         totalAmount: invoice.totalAmount,
+        taxRate: invoice.taxRate || 0,
+        taxAmount: invoice.taxAmount || 0,
+        expenses: invoice.expenses || { baraf: 0, rickshawRent: 0, workerExpense: 0 },
+        expenseTotal: invoice.expenseTotal || 0,
         amountPaid: invoice.totalAmount,
         paymentDate: todayStr,
         balance: 0,
