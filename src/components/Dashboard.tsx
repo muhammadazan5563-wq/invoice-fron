@@ -54,6 +54,7 @@ const WORKSPACE_IMAGE =
   'https://mgx-backend-cdn.metadl.com/generate/images/1500378/2026-08-01/tumdfbacajrq/card-workspace-desk-plant-lamp.png';
 const BRAND_MARK =
   'https://mgx-backend-cdn.metadl.com/generate/images/1500378/2026-08-01/tumdfoacajra/logo-finnova-n-mark.png';
+const DASHBOARD_TIMEZONE = 'Asia/Karachi';
 
 interface DashboardProps {
   user: AppUser;
@@ -140,12 +141,12 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
 
   useEffect(() => {
     fetchDashboardSummary();
-  }, [invoiceTemplate?.timezone]);
+  }, []);
 
   const fetchDashboardSummary = async () => {
     const requestId = ++summaryRequestRef.current;
     try {
-      const date = getTodayInTimezone(invoiceTemplate?.timezone || 'UTC');
+      const date = getTodayInTimezone(DASHBOARD_TIMEZONE);
       const query = `date=${encodeURIComponent(date)}`;
       const [customerSummary, vendorSummary] = await Promise.all([
         apiRequest<DashboardSummary>(`/api/dashboard/summary?${query}&mode=customer`),
@@ -306,7 +307,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
 
   const handleMarkAsPaid = async (invoice: Invoice) => {
     const performMark = async () => {
-      const todayStr = getTodayInTimezone(invoiceTemplate?.timezone || 'UTC');
+      const todayStr = getTodayInTimezone(invoiceTemplate?.timezone || 'Asia/Karachi');
       const updatedInvoice: Omit<Invoice, 'rowIndex' | 'rawRow'> = {
         id: invoice.id,
         date: invoice.date,
@@ -377,7 +378,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   };
 
   const handleApplyPayment = async (contactId: string, amount: number): Promise<number> => {
-    const paymentDate = getTodayInTimezone(invoiceTemplate?.timezone || 'UTC');
+    const paymentDate = getTodayInTimezone(invoiceTemplate?.timezone || 'Asia/Karachi');
     setLoadingInvoices(true);
     setError(null);
     try {
