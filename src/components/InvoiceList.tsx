@@ -663,7 +663,7 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
                     </p>
                   </div>
 
-                  {selectedInvoice.invoiceType !== 'vendor' && (selectedInvoice.expenseTotal || 0) > 0 && (
+                  {selectedInvoice.invoiceType === 'vendor' && (selectedInvoice.expenseTotal || 0) > 0 && (
                     <div className="bg-mist p-4 rounded-[16px]">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-quill-soft block mb-2">
                         Expense details
@@ -687,10 +687,10 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
                     <span>Commission {selectedInvoice.taxRate ? `(${selectedInvoice.taxRate}%)` : ''}</span>
                     <span className="nums">{currencySymbol}{money(selectedInvoice.taxAmount || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-[12px] font-semibold text-quill">
+                  {selectedInvoice.invoiceType === 'vendor' && <div className="flex justify-between items-center text-[12px] font-semibold text-quill">
                     <span>Expenses</span>
                     <span className="nums">{currencySymbol}{money(selectedInvoice.expenseTotal || 0)}</span>
-                  </div>
+                  </div>}
                   <div className="flex justify-between items-center pt-3 border-t border-hairline">
                     <span className="text-[12px] font-bold text-quill">Total amount</span>
                     <span className="nums text-[17px] font-extrabold text-ink font-display">{currencySymbol}{money(selectedInvoice.totalAmount)}</span>
