@@ -277,7 +277,6 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         }
         setViewState('dashboard');
         setEditingInvoice(undefined);
-        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
       } catch (err: any) {
         setError(`Failed to save invoice: ${err.message}`);
       } finally {
@@ -310,12 +309,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         customerName: invoice.customerName,
         customerId: invoice.customerId,
         customerEmail: invoice.customerEmail,
-        customerPhone: invoice.customerPhone,
         totalAmount: invoice.totalAmount,
-        taxRate: invoice.taxRate || 0,
-        taxAmount: invoice.taxAmount || 0,
-        expenses: invoice.expenses || { baraf: 0, rickshawRent: 0, workerExpense: 0 },
-        expenseTotal: invoice.expenseTotal || 0,
         amountPaid: invoice.totalAmount,
         paymentDate: todayStr,
         balance: 0,
