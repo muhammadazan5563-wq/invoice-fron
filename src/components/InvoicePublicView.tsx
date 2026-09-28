@@ -317,11 +317,18 @@ export default function InvoicePublicView() {
                       <span className="nums text-[15px] font-bold text-[#3f9c68]">
                         {currencySymbol}{money(invoice.amountPaid)}
                       </span>
-                      {invoice.paymentDate && (
-                        <div className="nums text-[10px] text-quill-soft mt-0.5 font-semibold">
-                          {invoice.paymentDate}
-                        </div>
-                      )}
+                      <div className="space-y-0.5 mt-1">
+                        {(invoice.payments?.length
+                          ? invoice.payments
+                          : invoice.paymentDate && invoice.amountPaid > 0
+                            ? [{ date: invoice.paymentDate, amount: invoice.amountPaid }]
+                            : []
+                        ).map((payment, index) => (
+                          <div key={`${payment.date}-${index}`} className="nums text-[10px] text-quill-soft font-semibold">
+                            {payment.date} - {currencySymbol}{money(payment.amount)}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
