@@ -695,8 +695,17 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
                       <span className="nums text-[15px] font-bold text-[#3f9c68]">
                         {currencySymbol}{money(selectedInvoice.amountPaid)}
                       </span>
-                      <div className="nums text-[10px] text-quill-soft mt-0.5 font-semibold">
-                        {selectedInvoice.paymentDate || selectedInvoice.date}
+                      <div className="space-y-0.5 mt-1">
+                        {(selectedInvoice.payments?.length
+                          ? selectedInvoice.payments
+                          : selectedInvoice.amountPaid > 0
+                            ? [{ date: selectedInvoice.paymentDate || selectedInvoice.date, amount: selectedInvoice.amountPaid }]
+                            : []
+                        ).map((payment, index) => (
+                          <div key={`${payment.date}-${index}`} className="nums text-[10px] text-quill-soft font-semibold">
+                            {payment.date} - {currencySymbol}{money(payment.amount)}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
