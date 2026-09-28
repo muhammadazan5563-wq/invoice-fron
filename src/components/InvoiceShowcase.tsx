@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Invoice } from '../types';
+import { getInvoiceGrossAmount } from '../lib/invoice-calculations';
 import {
   Link2,
   CalendarClock,
@@ -366,9 +367,9 @@ export default function InvoiceShowcase({
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 pt-1">
               <div className="grid grid-cols-3 gap-5">
                 <div>
-                  <span className="block text-[10px] font-semibold text-white/55">Sub total</span>
+                  <span className="block text-[10px] font-semibold text-white/55">Gross amount</span>
                   <span className="nums block text-[15px] font-extrabold text-white mt-1">
-                    {currencySymbol}{money(detail.totalAmount)}
+                    {currencySymbol}{money(getInvoiceGrossAmount(detail))}
                   </span>
                 </div>
                 <div>
@@ -386,7 +387,13 @@ export default function InvoiceShowcase({
                   </div>
                 )}
                 <div>
-                  <span className="block text-[10px] font-semibold text-white/55">Paid</span>
+                  <span className="block text-[10px] font-semibold text-white/55">Total amount</span>
+                  <span className="nums block text-[15px] font-extrabold text-white mt-1">
+                    {currencySymbol}{money(detail.totalAmount)}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-semibold text-white/55">Amount paid</span>
                   <span className="nums block text-[15px] font-extrabold text-white mt-1">
                     {currencySymbol}{money(detail.amountPaid)}
                   </span>
