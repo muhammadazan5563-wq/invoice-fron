@@ -74,7 +74,7 @@ export default function KpiCards({
     collectionRate >= 85 ? '#10b981' : collectionRate >= 60 ? '#34d399' : collectionRate >= 35 ? '#f59e0b' : '#f43f5e';
 
   // Today collection
-  const todayStr = getTodayInTimezone(template?.timezone || 'UTC');
+  const todayStr = getTodayInTimezone(template?.timezone || 'Asia/Karachi');
   let todayTotal = 0;
   let todayPaidCount = 0;
   let todayPendingCount = 0;
@@ -84,7 +84,7 @@ export default function KpiCards({
     if (paymentsArray.length > 0) {
       paymentsArray.forEach((p) => {
         if (p.date === todayStr) {
-          todayTotal += p.amount;
+          todayTotal += Number(p.appliedAmount ?? p.amount ?? 0);
         }
       });
       if (paymentsArray.some((p) => p.date === todayStr)) {
