@@ -1009,7 +1009,15 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         )}
 
         {viewState === 'search' && (
-          <UserHistory contacts={contacts} template={invoiceTemplate} />
+          <UserHistory
+            contacts={contacts}
+            template={invoiceTemplate}
+            onEdit={(invoice) => {
+              setEditingInvoice(invoice);
+              setViewState('edit');
+            }}
+            onDelete={handleDeleteInvoice}
+          />
         )}
 
         {/* ── Settings ──────────────────────────────────────── */}
