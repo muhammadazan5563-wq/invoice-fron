@@ -19,6 +19,14 @@ interface UserHistoryProps {
 const money = (value: number, symbol: string) =>
   `${symbol}${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
+const invoiceDateValue = (value: string) => {
+  const raw = String(value || '').trim();
+  const dayFirst = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (dayFirst) return new Date(Number(dayFirst[3]), Number(dayFirst[2]) - 1, Number(dayFirst[1])).getTime();
+  const parsed = new Date(raw).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
 const BRAND_MARK = 'https://mgx-backend-cdn.metadl.com/generate/images/1500378/2026-08-01/tumdfoacajra/logo-finnova-n-mark.png';
 
 export default function UserHistory({ contacts, template, onEdit, onDelete, onMarkAsPaid }: UserHistoryProps) {
@@ -58,7 +66,7 @@ export default function UserHistory({ contacts, template, onEdit, onDelete, onMa
       const result = await getInvoiceHistory(contact.id, invoiceType);
       if (requestId === historyRequestRef.current) {
         const sortedInvoices = [...result.invoices].sort((a, b) => {
-          const dateDifference = String(b.date || '').slice(0, 10).localeCompare(String(a.date || '').slice(0, 10));
+          const dateDifference = invoiceDateValue(b.date) - invoiceDateValue(a.date);
           return dateDifference || String(b.id || '').localeCompare(String(a.id || ''));
         });
         setInvoices(sortedInvoices);
