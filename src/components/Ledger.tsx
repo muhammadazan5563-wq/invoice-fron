@@ -193,6 +193,7 @@ export default function Ledger({ template }: LedgerProps) {
           guest_name: inv.customerName,
           hotel_name: inv.hotelName || '',
           total_amount: inv.totalAmount,
+          invoice_type: inv.invoiceType || 'customer',
         }));
       await saveLedgerDay({
         ledger_date: selectedDate,
@@ -226,7 +227,8 @@ export default function Ledger({ template }: LedgerProps) {
         setSelectedEntry({
           ...selectedEntry,
           invoices: updated,
-          totalReceived: updated.reduce((s, i) => s + i.total_amount, 0),
+          totalReceived: updated.filter((i) => i.invoice_type !== 'vendor').reduce((s, i) => s + i.total_amount, 0),
+          totalExpense: updated.filter((i) => i.invoice_type === 'vendor').reduce((s, i) => s + i.total_amount, 0) + selectedEntry.expenses.filter((e) => e.tag !== 'cash').reduce((s, e) => s + e.amount, 0),
         });
       }
     } catch (err: any) {
@@ -241,9 +243,9 @@ export default function Ledger({ template }: LedgerProps) {
       if (selectedEntry) {
         const updated = selectedEntry.expenses.filter((exp) => exp.id !== id);
         const newTotalReceived =
-          selectedEntry.invoices.reduce((s, i) => s + i.total_amount, 0) +
+          selectedEntry.invoices.filter((i) => i.invoice_type !== 'vendor').reduce((s, i) => s + i.total_amount, 0) +
           updated.filter((e) => e.tag === 'cash').reduce((s, e) => s + e.amount, 0);
-        const newTotalExpense = updated.filter((e) => e.tag !== 'cash').reduce((s, e) => s + e.amount, 0);
+        const newTotalExpense = selectedEntry.invoices.filter((i) => i.invoice_type === 'vendor').reduce((s, i) => s + i.total_amount, 0) + updated.filter((e) => e.tag !== 'cash').reduce((s, e) => s + e.amount, 0);
         setSelectedEntry({
           ...selectedEntry,
           expenses: updated,
@@ -273,16 +275,16 @@ export default function Ledger({ template }: LedgerProps) {
   };
 
   const grandTotalReceived =
-    allInvoices.reduce((sum, inv) => sum + inv.total_amount, 0) +
+    allInvoices.filter((inv) => inv.invoice_type !== 'vendor').reduce((sum, inv) => sum + inv.total_amount, 0) +
     allExpenses.filter((exp) => exp.tag === 'cash').reduce((sum, exp) => sum + exp.amount, 0);
-  const grandTotalExpense = allExpenses
+  const grandTotalExpense = allInvoices.filter((inv) => inv.invoice_type === 'vendor').reduce((sum, inv) => sum + inv.total_amount, 0) + allExpenses
     .filter((exp) => exp.tag !== 'cash')
     .reduce((sum, exp) => sum + exp.amount, 0);
 
   const panelTotalReceived =
-    todayInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0) +
+    todayInvoices.filter((inv) => inv.invoiceType !== 'vendor').reduce((sum, inv) => sum + inv.totalAmount, 0) +
     expenseEntries.filter((exp) => exp.tag === 'cash').reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
-  const panelTotalExpense = expenseEntries
+  const panelTotalExpense = todayInvoices.filter((inv) => inv.invoiceType === 'vendor').reduce((sum, inv) => sum + inv.totalAmount, 0) + expenseEntries
     .filter((exp) => exp.tag !== 'cash')
     .reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
 
@@ -375,8 +377,8 @@ export default function Ledger({ template }: LedgerProps) {
                       </td>
                       <td className="py-4 px-5 text-[12px] font-bold text-ink">{inv.customerName}</td>
                       <td className="py-4 px-5 text-[12px] text-quill font-semibold">{inv.hotelName || '—'}</td>
-                      <td className="nums py-4 px-5 text-right text-[12px] font-bold text-[#3f9c68]">
-                        {currencySymbol}{money(inv.totalAmount)}
+                      <td className={`nums py-4 px-5 text-right text-[12px] font-bold ${inv.invoiceType === 'vendor' ? 'text-[#a8492f]' : 'text-[#3f9c68]'}`}>
+                        {inv.invoiceType === 'vendor' ? '-' : ''}{currencySymbol}{money(inv.totalAmount)}
                       </td>
                     </tr>
                   ))}
@@ -661,7 +663,7 @@ export default function Ledger({ template }: LedgerProps) {
                 <Receipt className="w-4 h-4 text-[#3f9c68]" />
               </span>
               <h3 className="text-[15px] font-extrabold text-ink font-display">
-                Invoice income ({selectedEntry.invoices.length})
+                Ledger invoices ({selectedEntry.invoices.length})
               </h3>
             </div>
             <div className="bg-mist rounded-[20px] overflow-hidden overflow-x-auto">
@@ -685,8 +687,8 @@ export default function Ledger({ template }: LedgerProps) {
                       </td>
                       <td className="py-4 px-5 text-[12px] font-bold text-ink">{inv.guest_name}</td>
                       <td className="py-4 px-5 text-[12px] text-quill font-semibold">{inv.hotel_name || '—'}</td>
-                      <td className="nums py-4 px-5 text-right text-[12px] font-bold text-[#3f9c68]">
-                        +{currencySymbol}{money(inv.total_amount)}
+                      <td className={`nums py-4 px-5 text-right text-[12px] font-bold ${inv.invoice_type === 'vendor' ? 'text-[#a8492f]' : 'text-[#3f9c68]'}`}>
+                        {inv.invoice_type === 'vendor' ? '-' : '+'}{currencySymbol}{money(inv.total_amount)}
                       </td>
                       <td className="py-4 px-5 text-center">
                         <button
