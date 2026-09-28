@@ -264,7 +264,7 @@ export default function InvoicePublicView() {
                   </p>
                 </div>
 
-                {(invoice.notes || (invoice.expenseTotal || 0) > 0) && (
+                {(invoice.notes || (invoice.invoiceType === 'vendor' && (invoice.expenseTotal || 0) > 0)) && (
                   <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.45fr)_minmax(220px,0.8fr)] gap-4 items-stretch">
                     {invoice.notes && (
                       <div className="bg-mist rounded-[18px] px-5 py-5">
@@ -277,7 +277,7 @@ export default function InvoicePublicView() {
                       </div>
                     )}
 
-                    {(invoice.expenseTotal || 0) > 0 && (
+                    {invoice.invoiceType === 'vendor' && (invoice.expenseTotal || 0) > 0 && (
                       <div className="bg-mist rounded-[18px] px-5 py-5">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-quill-soft block mb-3">
                           Expense details
@@ -303,10 +303,10 @@ export default function InvoicePublicView() {
                     <span>Commission {invoice.taxRate ? `(${invoice.taxRate}%)` : ''}</span>
                     <span className="nums">{currencySymbol}{money(invoice.taxAmount || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-[12px] font-semibold text-quill">
+                  {invoice.invoiceType === 'vendor' && <div className="flex justify-between items-center text-[12px] font-semibold text-quill">
                     <span>Expenses</span>
                     <span className="nums">{currencySymbol}{money(invoice.expenseTotal || 0)}</span>
-                  </div>
+                  </div>}
                   <div className="flex justify-between items-center pt-3 border-t border-hairline">
                     <span className="text-[12px] font-bold text-quill">Total amount</span>
                     <span className="nums text-[17px] font-extrabold text-ink font-display">{currencySymbol}{money(invoice.totalAmount)}</span>
