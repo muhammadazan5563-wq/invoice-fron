@@ -16,17 +16,22 @@ interface InvoiceListProps {
   template?: InvoiceTemplate | null;
   initialSelectedInvoice?: Invoice | null;
   hideList?: boolean;
+  onPreviewClose?: () => void;
 }
 
 const money = (n: number) =>
   (Object.is(n, -0) ? 0 : n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-export default function InvoiceList({ invoices, total, hasMore = false, onLoadMore, onEdit, onDelete, onMarkAsPaid, template, initialSelectedInvoice = null, hideList = false }: InvoiceListProps) {
+export default function InvoiceList({ invoices, total, hasMore = false, onLoadMore, onEdit, onDelete, onMarkAsPaid, template, initialSelectedInvoice = null, hideList = false, onPreviewClose }: InvoiceListProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(initialSelectedInvoice);
   const [visibleCount, setVisibleCount] = useState<number>(600);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  useEffect(() => {
+    if (hideList) setSelectedInvoice(initialSelectedInvoice);
+  }, [hideList, initialSelectedInvoice]);
 
   const currencySymbol = getCurrencySymbol(template?.currency || 'USD');
 
@@ -528,7 +533,7 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedInvoice(null)}
+                  onClick={() => (onPreviewClose ? onPreviewClose() : setSelectedInvoice(null))}
                   title="Close preview"
                   className="w-8 h-8 rounded-full flex items-center justify-center text-white/65 hover:text-white hover:bg-white/12 transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-soft"
                 >
