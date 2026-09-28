@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Invoice } from '../types';
 import { InvoiceTemplate, getCurrencySymbol } from '../lib/settings';
+import { getInvoiceGrossAmount } from '../lib/invoice-calculations';
 import { Search, Eye, Edit2, CheckCircle, Trash2, Printer, FileText, Mail, Phone, MapPin, X, Plus, Waves, Loader2 } from 'lucide-react';
 import InvoiceQRCode from './InvoiceQRCode';
 
@@ -672,25 +673,21 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
 
                 <div className="space-y-3.5">
                   <div className="flex justify-between items-center">
-                    <span className="text-[12px] font-semibold text-quill">Total amount</span>
-                    <span className="nums text-[17px] font-extrabold text-ink font-display">
-                      {currencySymbol}{money(selectedInvoice.totalAmount)}
-                    </span>
+                    <span className="text-[12px] font-semibold text-quill">Gross amount</span>
+                    <span className="nums text-[15px] font-bold text-ink">{currencySymbol}{money(getInvoiceGrossAmount(selectedInvoice))}</span>
                   </div>
-
-                  {!!selectedInvoice.taxAmount && (
-                    <div className="flex justify-between items-center text-[12px] font-semibold text-quill">
-                      <span>Commission {selectedInvoice.taxRate ? `(${selectedInvoice.taxRate}%)` : ''}</span>
-                      <span className="nums">{currencySymbol}{money(selectedInvoice.taxAmount)}</span>
-                    </div>
-                  )}
-
-                  {selectedInvoice.invoiceType !== 'vendor' && !!selectedInvoice.expenseTotal && (
-                    <div className="flex justify-between items-center text-[12px] font-semibold text-quill">
-                      <span>Expenses</span>
-                      <span className="nums">{currencySymbol}{money(selectedInvoice.expenseTotal)}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between items-center text-[12px] font-semibold text-quill">
+                    <span>Commission {selectedInvoice.taxRate ? `(${selectedInvoice.taxRate}%)` : ''}</span>
+                    <span className="nums">{currencySymbol}{money(selectedInvoice.taxAmount || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[12px] font-semibold text-quill">
+                    <span>Expenses</span>
+                    <span className="nums">{currencySymbol}{money(selectedInvoice.expenseTotal || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-3 border-t border-hairline">
+                    <span className="text-[12px] font-bold text-quill">Total amount</span>
+                    <span className="nums text-[17px] font-extrabold text-ink font-display">{currencySymbol}{money(selectedInvoice.totalAmount)}</span>
+                  </div>
 
                   <div className="flex justify-between items-start pt-3 border-t border-hairline">
                     <span className="text-[12px] font-semibold text-quill">Amount paid</span>
