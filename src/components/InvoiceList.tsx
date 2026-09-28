@@ -25,13 +25,13 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(initialSelectedInvoice);
-  const [visibleCount, setVisibleCount] = useState<number>(300);
+  const [visibleCount, setVisibleCount] = useState<number>(600);
   const [loadingMore, setLoadingMore] = useState(false);
 
   const currencySymbol = getCurrencySymbol(template?.currency || 'USD');
 
   useEffect(() => {
-    setVisibleCount(300);
+    setVisibleCount(600);
   }, [search, statusFilter]);
 
   const filteredInvoices = invoices.filter((inv) => {
@@ -490,18 +490,18 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
                     setLoadingMore(true);
                     try {
                       await onLoadMore();
-                      setVisibleCount((prev) => prev + 300);
+                      setVisibleCount((prev) => prev + 600);
                     } finally {
                       setLoadingMore(false);
                     }
                   } else {
-                    setVisibleCount((prev) => prev + 300);
+                    setVisibleCount((prev) => prev + 600);
                   }
                 }}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand hover:bg-brand-mid disabled:opacity-60 disabled:pointer-events-none text-white font-bold px-5 py-2.5 rounded-full text-[11px] transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               >
                 {loadingMore ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                {loadingMore ? 'Loading invoices…' : 'Load 300 more'}
+                {loadingMore ? 'Loading invoices…' : 'Load 600 more'}
               </button>
             )}
           </div>
