@@ -14,15 +14,17 @@ interface InvoiceListProps {
   onDelete: (invoice: Invoice) => Promise<void>;
   onMarkAsPaid: (invoice: Invoice) => Promise<void>;
   template?: InvoiceTemplate | null;
+  initialSelectedInvoice?: Invoice | null;
+  hideList?: boolean;
 }
 
 const money = (n: number) =>
   (Object.is(n, -0) ? 0 : n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-export default function InvoiceList({ invoices, total, hasMore = false, onLoadMore, onEdit, onDelete, onMarkAsPaid, template }: InvoiceListProps) {
+export default function InvoiceList({ invoices, total, hasMore = false, onLoadMore, onEdit, onDelete, onMarkAsPaid, template, initialSelectedInvoice = null, hideList = false }: InvoiceListProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(initialSelectedInvoice);
   const [visibleCount, setVisibleCount] = useState<number>(300);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -311,7 +313,7 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
   return (
     <div className="space-y-5" id="invoice-list-section">
       {/* Search & status pills */}
-      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+      <div className={`flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between ${hideList ? 'hidden' : ''}`}>
         <div className="relative w-full md:max-w-sm">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-quill pointer-events-none" />
           <input
@@ -340,7 +342,7 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
         </div>
       </div>
 
-      <div className={`grid grid-cols-1 gap-5 ${selectedInvoice ? 'xl:grid-cols-3' : ''}`}>
+      <div className={`grid grid-cols-1 gap-5 ${selectedInvoice ? 'xl:grid-cols-3' : ''} ${hideList ? 'hidden' : ''}`}>
         {/* Ledger table */}
         <div className={`bg-mist rounded-[22px] overflow-hidden ${selectedInvoice ? 'xl:col-span-1' : ''}`}>
           <div className="overflow-x-auto">
