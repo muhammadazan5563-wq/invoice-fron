@@ -56,7 +56,14 @@ export default function UserHistory({ contacts, template, onEdit, onDelete, onMa
     try {
       const invoiceType = contact.type === 'vendor' ? 'vendor' : 'customer';
       const result = await getInvoiceHistory(contact.id, invoiceType);
-      if (requestId === historyRequestRef.current) { setInvoices(result.invoices); setAccountSummary(result.summary); }
+      if (requestId === historyRequestRef.current) {
+        const sortedInvoices = [...result.invoices].sort((a, b) => {
+          const dateDifference = String(b.date || '').slice(0, 10).localeCompare(String(a.date || '').slice(0, 10));
+          return dateDifference || String(b.id || '').localeCompare(String(a.id || ''));
+        });
+        setInvoices(sortedInvoices);
+        setAccountSummary(result.summary);
+      }
     } catch {
       if (requestId === historyRequestRef.current) { setInvoices([]); setAccountSummary(null); }
     } finally {
