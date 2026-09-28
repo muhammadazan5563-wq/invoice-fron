@@ -1,6 +1,6 @@
 import { apiRequest, apiJson } from './api';
 
-export interface LedgerInvoice { id: string; invoice_id: string; ledger_date: string; guest_name: string; hotel_name: string; total_amount: number; created_at: string; }
+export interface LedgerInvoice { id: string; invoice_id: string; ledger_date: string; guest_name: string; hotel_name: string; total_amount: number; invoice_type?: 'customer' | 'vendor'; created_at: string; }
 export interface CashExpense { id: number; name: string; amount: number; description: string; tag: string; created_at: string; }
 export interface LedgerEntry { date: string; invoices: LedgerInvoice[]; expenses: CashExpense[]; totalReceived: number; totalExpense: number; }
 
@@ -40,7 +40,9 @@ export function groupLedgerByDate(invoices: LedgerInvoice[], expenses: CashExpen
     const date = normalizeLedgerDate(inv.ledger_date || inv.id.match(/_(\d{4}-\d{2}-\d{2})$/)?.[1] || inv.created_at, timezone);
     if (!dateMap.has(date)) dateMap.set(date, { date, invoices: [], expenses: [], totalReceived: 0, totalExpense: 0 });
     const entry = dateMap.get(date)!;
-    entry.invoices.push(inv); entry.totalReceived += inv.total_amount;
+    entry.invoices.push(inv);
+    if (inv.invoice_type === 'vendor') entry.totalExpense += inv.total_amount;
+    else entry.totalReceived += inv.total_amount;
   });
   expenses.forEach((exp) => {
     const date = toDateInTimezone(exp.created_at, timezone);
