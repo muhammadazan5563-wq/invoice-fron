@@ -186,7 +186,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
       const nextVendorPage = append ? vendorInvoicePage + 1 : 1;
       const customerPromise = getInvoicesPage({
         page: nextCustomerPage,
-        limit: 600,
+        limit: 2000,
         invoiceType: 'customer',
         customerId: filters.customerId || undefined,
         status: filters.status || undefined,
@@ -196,7 +196,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
       });
       const vendorPromise = getInvoicesPage({
           page: nextVendorPage,
-          limit: 600,
+          limit: 2000,
           invoiceType: 'vendor',
           customerId: vendorFilters.customerId || undefined,
           status: vendorFilters.status || undefined,
@@ -205,7 +205,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
           search: vendorFilters.search || undefined,
         }).catch((vendorError) => {
           console.warn('Vendor invoices are unavailable:', vendorError);
-          return { invoices: [] as Invoice[], total: 0, hasMore: false, page: nextVendorPage, limit: 600 };
+          return { invoices: [] as Invoice[], total: 0, hasMore: false, page: nextVendorPage, limit: 2000 };
         });
       const [customerData, vendorData] = await Promise.all([customerPromise, vendorPromise]);
       if (requestId !== invoiceRequestRef.current) return;
@@ -263,6 +263,18 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         }
 
         await fetchInvoices();
+        const savedInvoice = invoiceData as Invoice;
+        if (savedInvoice.invoiceType === 'vendor') {
+          setVendorInvoices((previous) => {
+            const existing = previous.find((invoice) => invoice.id === savedInvoice.id);
+            return [existing || savedInvoice, ...previous.filter((invoice) => invoice.id !== savedInvoice.id)];
+          });
+        } else {
+          setInvoices((previous) => {
+            const existing = previous.find((invoice) => invoice.id === savedInvoice.id);
+            return [existing || savedInvoice, ...previous.filter((invoice) => invoice.id !== savedInvoice.id)];
+          });
+        }
         setViewState('dashboard');
         setEditingInvoice(undefined);
       } catch (err: any) {
