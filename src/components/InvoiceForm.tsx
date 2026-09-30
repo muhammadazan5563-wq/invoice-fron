@@ -3,7 +3,7 @@ import { Invoice, BookingItem, PaymentRecord, InvoiceExpenses } from '../types';
 import { Contact } from '../lib/contacts';
 import { InvoiceTemplate, getCurrencySymbol } from '../lib/settings';
 import { getTodayInTimezone } from '../lib/timezone';
-import { Plus, Trash2, ArrowLeft, Save, Sparkles } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Save, Sparkles, Calculator } from 'lucide-react';
 
 interface InvoiceFormProps {
   invoice?: Invoice;
@@ -67,6 +67,8 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeSpeciesRow, setActiveSpeciesRow] = useState<number | null>(null);
+  const [activeCalculatorRow, setActiveCalculatorRow] = useState<number | null>(null);
+  const [calculatorAmount, setCalculatorAmount] = useState('');
 
   const defaultNotes =
     template?.paymentDetails || `Beneficiary: Bank of America\nSwift Sort\nAccount No.: 324 6654 7766 9992`;
@@ -251,6 +253,21 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   const removeItemRow = (index: number) => {
     if (items.length === 1) return;
     setItems(items.filter((_, i) => i !== index));
+  };
+
+  const calculateRatePerKg = (index: number) => {
+    const amount = Number.parseFloat(calculatorAmount);
+    const quantity = Number(items[index]?.quantity || 0);
+    if (!Number.isFinite(amount) || amount <= 0 || quantity <= 0) {
+      setError('Enter a total amount and a quantity greater than zero to calculate the rate.');
+      return;
+    }
+
+    const rate = Math.round((amount / quantity) * 100) / 100;
+    handleItemChange(index, 'price', String(rate));
+    setActiveCalculatorRow(null);
+    setCalculatorAmount('');
+    setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -520,15 +537,52 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
                         {currencySymbol}{money(item.quantity * item.price)}
                       </td>
                       <td className="p-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => removeItemRow(index)}
-                          disabled={items.length === 1}
-                          title="Remove line"
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-quill hover:text-[#c0453c] hover:bg-[#fdeeea] disabled:opacity-40 disabled:pointer-events-none transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="relative flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveCalculatorRow(activeCalculatorRow === index ? null : index);
+                              setCalculatorAmount('');
+                              setError(null);
+                            }}
+                            title="Calculate rate per kg from total amount"
+                            aria-label={`Calculate rate per kilogram for line ${index + 1}`}
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-quill hover:text-brand hover:bg-brand-pale transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                          >
+                            <Calculator className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeItemRow(index)}
+                            disabled={items.length === 1}
+                            title="Remove line"
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-quill hover:text-[#c0453c] hover:bg-[#fdeeea] disabled:opacity-40 disabled:pointer-events-none transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          {activeCalculatorRow === index && (
+                            <div className="absolute z-[120] right-0 bottom-full mb-2 w-56 rounded-2xl border border-hairline bg-shell p-3 text-left shadow-xl">
+                              <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-quill-soft">Calculate rate per kg</div>
+                              <input
+                                autoFocus
+                                type="text"
+                                inputMode="decimal"
+                                value={calculatorAmount}
+                                onChange={(event) => setCalculatorAmount(event.target.value)}
+                                placeholder="Total amount, e.g. 5000"
+                                className="w-full bg-mist rounded-xl px-3 py-2 text-[11px] font-semibold text-ink placeholder:text-quill-soft outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand"
+                              />
+                              <div className="mt-2 text-[10px] text-quill">{items[index].quantity > 0 ? `÷ ${items[index].quantity} kg` : 'Enter quantity first'}</div>
+                              <button
+                                type="button"
+                                onClick={() => calculateRatePerKg(index)}
+                                className="mt-2 w-full rounded-xl bg-brand px-3 py-2 text-[11px] font-bold text-white hover:bg-brand-mid transition-colors"
+                              >
+                                Fill rate per kg
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
