@@ -34,6 +34,16 @@ const labelClass = 'block text-[10px] font-bold text-quill-soft uppercase tracki
 const money = (n: number) =>
   (Object.is(n, -0) ? 0 : n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
+const emptyItem = (): BookingItem => ({
+  roomType: '',
+  quantity: 0,
+  checkIn: '',
+  checkOut: '',
+  nights: 0,
+  price: 0,
+  total: 0,
+});
+
 export default function InvoiceForm({ invoice, contacts, onSave, onCancel, suggestInvoiceId, template }: InvoiceFormProps) {
   const currencySymbol = getCurrencySymbol(template?.currency || 'USD');
 
@@ -51,9 +61,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   const [paymentDate, setPaymentDate] = useState('');
   const [status, setStatus] = useState<FormStatus>('Pending');
   const [notes, setNotes] = useState('');
-  const [items, setItems] = useState<BookingItem[]>([
-    { roomType: '', quantity: 1, checkIn: '', checkOut: '', nights: 1, price: 0, total: 0 }
-  ]);
+  const [items, setItems] = useState<BookingItem[]>([emptyItem()]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [subtotal, setSubtotal] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -108,7 +116,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
       setItems(
         invoice.items.length > 0
           ? invoice.items
-          : [{ roomType: '', quantity: 1, checkIn: '', checkOut: '', nights: 1, price: 0, total: 0 }]
+          : [emptyItem()]
       );
       setSubtotal(invoice.totalAmount);
 
@@ -136,17 +144,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
       setPaymentDate(today);
       setStatus('Due');
       setNotes(template?.paymentDetails || template?.defaultNotes || defaultNotes);
-      setItems([
-        {
-          roomType: 'Tuna',
-          quantity: 1,
-          checkIn: today,
-          checkOut: getNextDayStr(today),
-          nights: 1,
-          price: 50.0,
-          total: 50.0
-        }
-      ]);
+      setItems([emptyItem()]);
       setPayments([{ amount: 0, date: today }]);
     }
   }, [invoice, suggestInvoiceId, template]);
@@ -228,7 +226,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
     } else if (field === 'description') {
       currentItem.description = value;
     } else if (field === 'quantity') {
-      currentItem.quantity = Math.max(1, parseInt(value) || 0);
+      currentItem.quantity = Math.max(0, parseFloat(value) || 0);
     } else if (field === 'checkIn') {
       currentItem.checkIn = value;
       currentItem.nights = calculateNights(value, currentItem.checkOut);
@@ -236,7 +234,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
       currentItem.checkOut = value;
       currentItem.nights = calculateNights(currentItem.checkIn, value);
     } else if (field === 'nights') {
-      currentItem.nights = Math.max(1, parseInt(value) || 0);
+      currentItem.nights = Math.max(0, parseInt(value) || 0);
     } else if (field === 'price') {
       currentItem.price = Math.max(0, parseFloat(value) || 0);
     }
@@ -247,19 +245,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   };
 
   const addItemRow = () => {
-    const today = getTodayInTimezone(template?.timezone || 'UTC');
-    setItems([
-      ...items,
-      {
-        roomType: 'Tuna',
-        quantity: 1,
-        checkIn: today,
-        checkOut: getNextDayStr(today),
-        nights: 1,
-        price: 50.0,
-        total: 50.0
-      }
-    ]);
+    setItems([...items, emptyItem()]);
   };
 
   const removeItemRow = (index: number) => {
@@ -281,7 +267,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
       setError(`Select a ${invoiceType} contact with a valid customer ID before saving.`);
       return;
     }
-    if (items.some((item) => !item.roomType.trim())) {
+    if (items.some((item) => !item.roomType.trim() || item.quantity <= 0 || item.price <= 0)) {
       setError('Every fish line needs a species, quantity and rate.');
       return;
     }
@@ -399,7 +385,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
         )}
 
         {/* Invoice identity */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="relative z-[100] grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <label htmlFor="inv-id" className={labelClass}>Invoice number</label>
             <input
@@ -428,10 +414,10 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
 
         {/* Guest / vendor contact */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-          <div className="relative">
+          <div className="relative z-[100]">
             <label htmlFor="inv-contact" className={labelClass}>{invoiceType === 'vendor' ? 'Vendor name' : 'Customer name'}</label>
             <input id="inv-contact" type="text" required value={contactSearch || customerName} onChange={(e) => { setContactSearch(e.target.value); setCustomerName(e.target.value); setSelectedContactId(''); }} className={fieldClass} placeholder={`Search ${invoiceType} name`} />
-            {contactMatches.length > 0 && !selectedContactId && (!invoice || !invoice.customerId) && <div className="absolute z-10 top-full left-0 right-0 mt-2 bg-shell rounded-2xl shadow-xl border border-hairline overflow-hidden">{contactMatches.map((contact) => <button type="button" key={contact.id} onClick={() => selectContact(contact)} className="w-full text-left px-4 py-3 hover:bg-mist text-[12px] font-bold text-ink">{contact.fullName}<span className="block text-[10px] text-quill font-medium">{contact.email}{contact.phone ? ` · ${contact.phone}` : ''}</span></button>)}</div>}
+            {contactMatches.length > 0 && !selectedContactId && (!invoice || !invoice.customerId) && <div className="absolute z-[110] top-full left-0 right-0 mt-2 bg-shell rounded-2xl shadow-xl border border-hairline overflow-hidden">{contactMatches.map((contact) => <button type="button" key={contact.id} onClick={() => selectContact(contact)} className="w-full text-left px-4 py-3 hover:bg-mist text-[12px] font-bold text-ink">{contact.fullName}<span className="block text-[10px] text-quill font-medium">{contact.email}{contact.phone ? ` · ${contact.phone}` : ''}</span></button>)}</div>}
           </div>
           <div><label htmlFor="inv-email" className={labelClass}>{invoiceType === 'vendor' ? 'Vendor email' : 'Customer email'}</label><input id="inv-email" type="email" value={customerEmail} readOnly={!!selectedContactId} onChange={(e) => setCustomerEmail(e.target.value)} className={fieldClass} placeholder="Email" /></div>
           <div><label htmlFor="inv-phone" className={labelClass}>Phone</label><input id="inv-phone" value={customerPhone} readOnly={!!selectedContactId} onChange={(e) => setCustomerPhone(e.target.value)} className={fieldClass} placeholder="Phone" /></div>
@@ -466,7 +452,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
                 </thead>
                 <tbody>
                   {items.map((item, index) => (
-                    <tr key={index} className="bg-shell border-t-4 border-mist">
+                    <tr key={index} className={`bg-shell border-t-4 border-mist relative ${activeSpeciesRow === index ? 'z-[100]' : 'z-0'}`}>
                       <td className="p-3 relative z-50">
                         <div className="relative">
                           <input
@@ -481,7 +467,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
                             placeholder="Search fish species"
                           />
                           {activeSpeciesRow === index && speciesMatches(item.roomType).length > 0 && (
-                            <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-shell rounded-xl shadow-xl border border-hairline overflow-hidden">
+                            <div className="absolute z-[110] top-full left-0 right-0 mt-1 bg-shell rounded-xl shadow-xl border border-hairline overflow-hidden">
                               {speciesMatches(item.roomType).map((species) => (
                                 <button
                                   type="button"
@@ -507,22 +493,22 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
                       </td>
                       <td className="p-3">
                         <input
-                          type="number"
+                          type="text" inputMode="decimal"
                           required
-                          min="0.01"
-                          step="0.01"
+                         
+                         
                           aria-label={`Quantity in kilograms for line ${index + 1}`}
-                          value={item.quantity}
+                            value={item.quantity || ''}
                           onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                           className={`${cellClass} nums text-center`}
                         />
                       </td>
                       <td className="p-3">
                         <input
-                          type="number"
+                          type="text" inputMode="decimal"
                           required
-                          min="0"
-                          step="0.01"
+                         
+                         
                           aria-label={`Rate per kilogram for line ${index + 1}`}
                           value={item.price || ''}
                           onChange={(e) => handleItemChange(index, 'price', e.target.value)}
@@ -597,7 +583,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
                   ] as const).map(([key, label]) => (
                     <div key={key}>
                       <label htmlFor={`expense-${key}`} className={labelClass}>{label}</label>
-                      <input id={`expense-${key}`} type="number" min="0" step="0.01" value={expenses[key] || ''} onChange={(event) => setExpenses({ ...expenses, [key]: Math.max(0, parseFloat(event.target.value) || 0) })} className={`${fieldClass} nums`} placeholder="0.00" />
+                      <input id={`expense-${key}`} type="text" inputMode="decimal" value={expenses[key] || ''} onChange={(event) => setExpenses({ ...expenses, [key]: Math.max(0, parseFloat(event.target.value) || 0) })} className={`${fieldClass} nums`} placeholder="0.00" />
                     </div>
                   ))}
                 </div>
@@ -618,9 +604,9 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
               </label>
               <input
                 id="inv-gross"
-                type="number"
-                min="0"
-                step="0.01"
+                type="text" inputMode="decimal"
+               
+               
                 value={subtotal || ''}
                 onChange={(e) => setSubtotal(Math.max(0, parseFloat(e.target.value) || 0))}
                 className="nums appearance-none w-28 bg-shell rounded-xl px-3 py-2 text-right text-[12px] font-bold text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand"
@@ -630,7 +616,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
 
             <div className="flex items-center justify-between gap-3">
               <label htmlFor="inv-tax-rate" className="text-[11px] font-bold text-quill">Commission rate (%)</label>
-              <input id="inv-tax-rate" type="number" min="0" step="0.01" value={taxRate || ''} onChange={(e) => setTaxRate(Math.max(0, parseFloat(e.target.value) || 0))} className="nums appearance-none w-28 bg-shell rounded-xl px-3 py-2 text-right text-[12px] font-bold text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand" placeholder="0.00" />
+              <input id="inv-tax-rate" type="text" inputMode="decimal" value={taxRate || ''} onChange={(e) => setTaxRate(Math.max(0, parseFloat(e.target.value) || 0))} className="nums appearance-none w-28 bg-shell rounded-xl px-3 py-2 text-right text-[12px] font-bold text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand" placeholder="0.00" />
             </div>
             <div className="flex justify-between items-center text-[11px] text-quill"><span>Commission amount</span><span className="nums font-bold text-ink">{currencySymbol}{money(taxAmount)}</span></div>
             {invoiceType === 'vendor' && <div className="flex justify-between items-center text-[11px] text-quill"><span>Expenses</span><span className="nums font-bold text-ink">{currencySymbol}{money(expenseTotal)}</span></div>}
@@ -657,9 +643,9 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
                       </label>
                       <input
                         id={`pay-amt-${idx}`}
-                        type="number"
-                        min="0"
-                        step="0.01"
+                        type="text" inputMode="decimal"
+                       
+                       
                         value={p.amount || ''}
                         onChange={(e) => handlePaymentChange(idx, 'amount', parseFloat(e.target.value) || 0)}
                         className="nums w-full bg-mist rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand"
