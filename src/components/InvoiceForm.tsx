@@ -34,16 +34,6 @@ const labelClass = 'block text-[10px] font-bold text-quill-soft uppercase tracki
 const money = (n: number) =>
   (Object.is(n, -0) ? 0 : n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-const emptyItem = (): BookingItem => ({
-  roomType: '',
-  quantity: 0,
-  checkIn: '',
-  checkOut: '',
-  nights: 0,
-  price: 0,
-  total: 0,
-});
-
 export default function InvoiceForm({ invoice, contacts, onSave, onCancel, suggestInvoiceId, template }: InvoiceFormProps) {
   const currencySymbol = getCurrencySymbol(template?.currency || 'USD');
 
@@ -61,7 +51,9 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   const [paymentDate, setPaymentDate] = useState('');
   const [status, setStatus] = useState<FormStatus>('Pending');
   const [notes, setNotes] = useState('');
-  const [items, setItems] = useState<BookingItem[]>([emptyItem()]);
+  const [items, setItems] = useState<BookingItem[]>([
+    { roomType: '', quantity: 1, checkIn: '', checkOut: '', nights: 1, price: 0, total: 0 }
+  ]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [subtotal, setSubtotal] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -116,7 +108,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
       setItems(
         invoice.items.length > 0
           ? invoice.items
-          : [emptyItem()]
+          : [{ roomType: '', quantity: 1, checkIn: '', checkOut: '', nights: 1, price: 0, total: 0 }]
       );
       setSubtotal(invoice.totalAmount);
 
@@ -144,7 +136,17 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
       setPaymentDate(today);
       setStatus('Due');
       setNotes(template?.paymentDetails || template?.defaultNotes || defaultNotes);
-      setItems([emptyItem()]);
+      setItems([
+        {
+          roomType: 'Tuna',
+          quantity: 1,
+          checkIn: today,
+          checkOut: getNextDayStr(today),
+          nights: 1,
+          price: 50.0,
+          total: 50.0
+        }
+      ]);
       setPayments([{ amount: 0, date: today }]);
     }
   }, [invoice, suggestInvoiceId, template]);
@@ -226,7 +228,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
     } else if (field === 'description') {
       currentItem.description = value;
     } else if (field === 'quantity') {
-      currentItem.quantity = Math.max(0, parseFloat(value) || 0);
+      currentItem.quantity = Math.max(1, parseInt(value) || 0);
     } else if (field === 'checkIn') {
       currentItem.checkIn = value;
       currentItem.nights = calculateNights(value, currentItem.checkOut);
@@ -234,7 +236,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
       currentItem.checkOut = value;
       currentItem.nights = calculateNights(currentItem.checkIn, value);
     } else if (field === 'nights') {
-      currentItem.nights = Math.max(0, parseInt(value) || 0);
+      currentItem.nights = Math.max(1, parseInt(value) || 0);
     } else if (field === 'price') {
       currentItem.price = Math.max(0, parseFloat(value) || 0);
     }
@@ -245,7 +247,19 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   };
 
   const addItemRow = () => {
-    setItems([...items, emptyItem()]);
+    const today = getTodayInTimezone(template?.timezone || 'UTC');
+    setItems([
+      ...items,
+      {
+        roomType: 'Tuna',
+        quantity: 1,
+        checkIn: today,
+        checkOut: getNextDayStr(today),
+        nights: 1,
+        price: 50.0,
+        total: 50.0
+      }
+    ]);
   };
 
   const removeItemRow = (index: number) => {
@@ -267,7 +281,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
       setError(`Select a ${invoiceType} contact with a valid customer ID before saving.`);
       return;
     }
-    if (items.some((item) => !item.roomType.trim() || item.quantity <= 0 || item.price <= 0)) {
+    if (items.some((item) => !item.roomType.trim())) {
       setError('Every fish line needs a species, quantity and rate.');
       return;
     }
@@ -385,7 +399,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
         )}
 
         {/* Invoice identity */}
-        <div className="relative z-[100] grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <label htmlFor="inv-id" className={labelClass}>Invoice number</label>
             <input
@@ -414,10 +428,10 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
 
         {/* Guest / vendor contact */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-          <div className="relative z-[100]">
+          <div className="relative">
             <label htmlFor="inv-contact" className={labelClass}>{invoiceType === 'vendor' ? 'Vendor name' : 'Customer name'}</label>
             <input id="inv-contact" type="text" required value={contactSearch || customerName} onChange={(e) => { setContactSearch(e.target.value); setCustomerName(e.target.value); setSelectedContactId(''); }} className={fieldClass} placeholder={`Search ${invoiceType} name`} />
-            {contactMatches.length > 0 && !selectedContactId && (!invoice || !invoice.customerId) && <div className="absolute z-[110] top-full left-0 right-0 mt-2 bg-shell rounded-2xl shadow-xl border border-hairline overflow-hidden">{contactMatches.map((contact) => <button type="button" key={contact.id} onClick={() => selectContact(contact)} className="w-full text-left px-4 py-3 hover:bg-mist text-[12px] font-bold text-ink">{contact.fullName}<span className="block text-[10px] text-quill font-medium">{contact.email}{contact.phone ? ` · ${contact.phone}` : ''}</span></button>)}</div>}
+            {contactMatches.length > 0 && !selectedContactId && (!invoice || !invoice.customerId) && <div className="absolute z-10 top-full left-0 right-0 mt-2 bg-shell rounded-2xl shadow-xl border border-hairline overflow-hidden">{contactMatches.map((contact) => <button type="button" key={contact.id} onClick={() => selectContact(contact)} className="w-full text-left px-4 py-3 hover:bg-mist text-[12px] font-bold text-ink">{contact.fullName}<span className="block text-[10px] text-quill font-medium">{contact.email}{contact.phone ? ` · ${contact.phone}` : ''}</span></button>)}</div>}
           </div>
           <div><label htmlFor="inv-email" className={labelClass}>{invoiceType === 'vendor' ? 'Vendor email' : 'Customer email'}</label><input id="inv-email" type="email" value={customerEmail} readOnly={!!selectedContactId} onChange={(e) => setCustomerEmail(e.target.value)} className={fieldClass} placeholder="Email" /></div>
           <div><label htmlFor="inv-phone" className={labelClass}>Phone</label><input id="inv-phone" value={customerPhone} readOnly={!!selectedContactId} onChange={(e) => setCustomerPhone(e.target.value)} className={fieldClass} placeholder="Phone" /></div>
@@ -467,7 +481,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
                             placeholder="Search fish species"
                           />
                           {activeSpeciesRow === index && speciesMatches(item.roomType).length > 0 && (
-                            <div className="mt-1 bg-shell rounded-xl shadow-xl border border-hairline overflow-hidden">
+                            <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-shell rounded-xl shadow-xl border border-hairline overflow-hidden">
                               {speciesMatches(item.roomType).map((species) => (
                                 <button
                                   type="button"
@@ -498,7 +512,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
                           min="0.01"
                           step="0.01"
                           aria-label={`Quantity in kilograms for line ${index + 1}`}
-                            value={item.quantity || ''}
+                          value={item.quantity}
                           onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                           className={`${cellClass} nums text-center`}
                         />
