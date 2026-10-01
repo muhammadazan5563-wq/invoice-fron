@@ -401,7 +401,7 @@ export default function InvoiceShowcase({
                 <div>
                   <span className="block text-[10px] font-semibold text-white/55">Balance due</span>
                   <span className="nums block text-[15px] font-extrabold text-white mt-1">
-                    {currencySymbol}{money(detail.balance)}
+                    {detail.balance < 0 ? `-${currencySymbol}${money(Math.abs(detail.balance))}` : `${currencySymbol}${money(detail.balance)}`}
                   </span>
                 </div>
               </div>
