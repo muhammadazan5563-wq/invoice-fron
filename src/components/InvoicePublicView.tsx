@@ -59,24 +59,35 @@ export default function InvoicePublicView() {
   const navigate = useNavigate();
 
   const [invoice, setInvoice] = useState<InvoiceRecord | null>(null);
+  const [invoiceTemplate, setInvoiceTemplate] = useState<InvoiceTemplate>(() => {
+    let localTemplate: InvoiceTemplate | null = null;
+    try {
+      localTemplate = JSON.parse(localStorage.getItem('invoice-template') || 'null') as InvoiceTemplate | null;
+    } catch {
+      localTemplate = null;
+    }
+    const passedTemplate = (location.state as any)?.invoiceTemplate as InvoiceTemplate | null;
+    return getTemplateWithDefaults((passedTemplate || localTemplate || { currency: 'PKR' }) as InvoiceTemplate);
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const savedTemplate = (() => {
-    try {
-      return JSON.parse(localStorage.getItem('invoice-template') || 'null') as InvoiceTemplate | null;
-    } catch {
-      return null;
-    }
-  })();
-  const passedTemplate = (location.state as any)?.invoiceTemplate as InvoiceTemplate | null;
-  const invoiceTemplate = getTemplateWithDefaults(
-    (passedTemplate || savedTemplate || { currency: 'PKR' }) as InvoiceTemplate
-  );
   const currencySymbol = getCurrencySymbol(invoiceTemplate.currency || 'PKR');
   const returnTo = (location.state as any)?.returnTo || '/track';
   const goBack = () => navigate(returnTo);
 
   useEffect(() => {
+    apiRequest<{ template: InvoiceTemplate | null }>('/api/public-invoice-template')
+      .then(({ template }) => {
+        if (template) {
+          const mergedTemplate = getTemplateWithDefaults(template);
+          setInvoiceTemplate(mergedTemplate);
+          localStorage.setItem('invoice-template', JSON.stringify(mergedTemplate));
+        }
+      })
+      .catch(() => {
+        // Keep the local/default template if the public template endpoint is unavailable.
+      });
+
     if (!invoiceId) {
       setError('No invoice number provided');
       setLoading(false);
@@ -125,8 +136,8 @@ export default function InvoicePublicView() {
               <ArrowLeft className="w-4 h-4 text-ink" />
             </button>
             <a href="/" className="flex items-center gap-2.5 no-underline">
-              <img src={BRAND_MARK} alt="" className="w-8 h-8 object-contain" />
-              <span className="text-[16px] font-extrabold tracking-tight text-ink font-display">FINNOVA</span>
+              <img src={invoiceTemplate.companyLogo || BRAND_MARK} alt="" className="w-8 h-8 object-contain" />
+              <span className="text-[16px] font-extrabold tracking-tight text-ink font-display">{invoiceTemplate.companyName || 'FINNOVA'}</span>
             </a>
           </header>
 
@@ -164,8 +175,8 @@ export default function InvoicePublicView() {
               <ArrowLeft className="w-4 h-4 text-ink" />
             </button>
             <a href="/" className="flex items-center gap-2.5 no-underline">
-              <img src={BRAND_MARK} alt="" className="w-8 h-8 object-contain" />
-              <span className="text-[16px] font-extrabold tracking-tight text-ink font-display">FINNOVA</span>
+              <img src={invoiceTemplate.companyLogo || BRAND_MARK} alt="" className="w-8 h-8 object-contain" />
+              <span className="text-[16px] font-extrabold tracking-tight text-ink font-display">{invoiceTemplate.companyName || 'FINNOVA'}</span>
             </a>
           </div>
 
@@ -382,7 +393,7 @@ export default function InvoicePublicView() {
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-3.5 h-3.5 text-brand" />
-                  <span>123 Anywhere St., Any City</span>
+                  <span>{invoiceTemplate.contactAddress || '123 Anywhere St., Any City'}</span>
                 </div>
               </div>
             </div>
