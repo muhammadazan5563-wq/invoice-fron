@@ -20,6 +20,13 @@ export interface InvoicePageOptions {
   invoiceType?: 'customer' | 'vendor';
 }
 
+export type ExpenseReportType = 'baraf' | 'rickshawRent' | 'workerExpense';
+
+export interface ExpenseReport {
+  invoices: Invoice[];
+  summary: { totalExpense: number; invoiceCount: number; totalInvoiceAmount: number };
+}
+
 function rowToInvoice(row: any): Invoice {
   const value = (camel: string, snake: string, fallback: any = '') => row[camel] ?? row[snake] ?? fallback;
   const expenses = row.expenses || {
@@ -94,6 +101,15 @@ export async function getInvoicesPage(options: InvoicePageOptions = {}): Promise
     limit: Number(response?.limit || options.limit || 2000),
     total: Number(response?.total ?? rows.length),
     hasMore: Boolean(response?.hasMore ?? rows.length === (options.limit || 2000)),
+  };
+}
+
+export async function getExpenseReport(fromDate: string, toDate: string, expense: ExpenseReportType): Promise<ExpenseReport> {
+  const params = new URLSearchParams({ fromDate, toDate, expense });
+  const response = await apiRequest<{ invoices?: any[]; summary?: ExpenseReport['summary'] }>(`/api/invoices/expenses?${params.toString()}`);
+  return {
+    invoices: (response.invoices || []).map(rowToInvoice),
+    summary: response.summary || { totalExpense: 0, invoiceCount: 0, totalInvoiceAmount: 0 },
   };
 }
 
