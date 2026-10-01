@@ -56,6 +56,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [taxRate, setTaxRate] = useState(0);
+  const [commissionAmount, setCommissionAmount] = useState<number | null>(null);
   const [expenses, setExpenses] = useState<InvoiceExpenses>({ baraf: 0, rickshawRent: 0, workerExpense: 0 });
   const [amountPaid, setAmountPaid] = useState<number>(0);
   const [paymentDate, setPaymentDate] = useState('');
@@ -110,6 +111,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
       setCustomerEmail(invoice.customerEmail);
       setCustomerPhone(invoice.customerPhone || '');
       setTaxRate(Math.max(0, Number(invoice.taxRate || 0)));
+      setCommissionAmount(Number.isFinite(Number(invoice.taxAmount)) ? Math.max(0, Number(invoice.taxAmount)) : null);
       setExpenses(invoice.expenses || { baraf: 0, rickshawRent: 0, workerExpense: 0 });
       setAmountPaid(invoice.amountPaid);
       setPaymentDate(invoice.paymentDate || invoice.date);
@@ -141,6 +143,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
       setCustomerEmail('');
       setCustomerPhone('');
       setTaxRate(0);
+      setCommissionAmount(null);
       setExpenses({ baraf: 0, rickshawRent: 0, workerExpense: 0 });
       setAmountPaid(0);
       setPaymentDate(today);
@@ -305,7 +308,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
         customerPhone: customerPhone.trim(),
         totalAmount,
         taxRate,
-        taxAmount,
+        taxAmount: effectiveCommissionAmount,
         expenses: invoiceType === 'vendor' ? expenses : { baraf: 0, rickshawRent: 0, workerExpense: 0 },
         expenseTotal,
         amountPaid,
@@ -342,8 +345,11 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   };
 
   const expenseTotal = invoiceType === 'vendor' ? Object.values(expenses).reduce((sum, value) => sum + value, 0) : 0;
-  const taxAmount = subtotal * taxRate / 100;
-  const totalAmount = subtotal + taxAmount + expenseTotal;
+  const commissionBase = invoiceType === 'vendor' ? Math.max(0, subtotal - expenseTotal) : subtotal;
+  const calculatedCommissionAmount = commissionBase * taxRate / 100;
+  const effectiveCommissionAmount = commissionAmount ?? calculatedCommissionAmount;
+  const taxAmount = effectiveCommissionAmount;
+  const totalAmount = subtotal + effectiveCommissionAmount + expenseTotal;
   // Preserve original Change due behavior for real overpayments, but never
   // allow floating-point -0 to reach the receipt display.
   const balance = normalizeCurrency(totalAmount - amountPaid);
@@ -438,7 +444,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
           </div>
           <div><label htmlFor="inv-email" className={labelClass}>{invoiceType === 'vendor' ? 'Vendor email' : 'Customer email'}</label><input id="inv-email" type="email" value={customerEmail} readOnly={!!selectedContactId} onChange={(e) => setCustomerEmail(e.target.value)} className={fieldClass} placeholder="Email" /></div>
           <div><label htmlFor="inv-phone" className={labelClass}>Phone</label><input id="inv-phone" value={customerPhone} readOnly={!!selectedContactId} onChange={(e) => setCustomerPhone(e.target.value)} className={fieldClass} placeholder="Phone" /></div>
-          <div><label htmlFor="inv-type" className={labelClass}>Invoice type</label><select id="inv-type" disabled={!!invoice} value={invoiceType} onChange={(e) => { const nextType = e.target.value as 'customer' | 'vendor'; setInvoiceType(nextType); setContactSearch(''); setSelectedContactId(''); setCustomerName(''); setCustomerEmail(''); setCustomerPhone(''); setTaxRate(0); if (nextType === 'customer') setExpenses({ baraf: 0, rickshawRent: 0, workerExpense: 0 }); }} className={fieldClass}><option value="customer">Customer sale</option><option value="vendor">Vendor purchase</option></select></div>
+          <div><label htmlFor="inv-type" className={labelClass}>Invoice type</label><select id="inv-type" disabled={!!invoice} value={invoiceType} onChange={(e) => { const nextType = e.target.value as 'customer' | 'vendor'; setInvoiceType(nextType); setContactSearch(''); setSelectedContactId(''); setCustomerName(''); setCustomerEmail(''); setCustomerPhone(''); setTaxRate(0); setCommissionAmount(0); if (nextType === 'customer') setExpenses({ baraf: 0, rickshawRent: 0, workerExpense: 0 }); }} className={fieldClass}><option value="customer">Customer sale</option><option value="vendor">Vendor purchase</option></select></div>
         </div>
 
         {/* Booking lines */}
@@ -509,16 +515,16 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
                         />
                       </td>
                       <td className="p-3">
-                        <input
-                          type="text" inputMode="decimal"
-                          required
-                         
-                         
-                          aria-label={`Quantity in kilograms for line ${index + 1}`}
+                          <input
+                            type="text" inputMode="decimal"
+                            required
+                            pattern="[0-9]*[.]?[0-9]*"
+                            aria-label={`Quantity in kilograms for line ${index + 1}`}
                             value={item.quantity || ''}
-                          onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                          className={`${cellClass} nums text-center`}
-                        />
+                            onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                            className={`${cellClass} nums text-center`}
+                            placeholder="0.00"
+                          />
                       </td>
                       <td className="p-3">
                         <input
@@ -672,7 +678,21 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
               <label htmlFor="inv-tax-rate" className="text-[11px] font-bold text-quill">Commission rate (%)</label>
               <input id="inv-tax-rate" type="text" inputMode="decimal" value={taxRate || ''} onChange={(e) => setTaxRate(Math.max(0, parseFloat(e.target.value) || 0))} className="nums appearance-none w-28 bg-shell rounded-xl px-3 py-2 text-right text-[12px] font-bold text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand" placeholder="0.00" />
             </div>
-            <div className="flex justify-between items-center text-[11px] text-quill"><span>Commission amount</span><span className="nums font-bold text-ink">{currencySymbol}{money(taxAmount)}</span></div>
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="inv-commission-amount" className="text-[11px] font-bold text-quill">Commission amount</label>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-quill-soft">{currencySymbol}</span>
+                <input
+                  id="inv-commission-amount"
+                  type="text"
+                  inputMode="decimal"
+                  value={commissionAmount === null ? effectiveCommissionAmount || '' : commissionAmount}
+                  onChange={(e) => setCommissionAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                  className="nums appearance-none w-28 bg-shell rounded-xl px-3 py-2 text-right text-[12px] font-bold text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
             {invoiceType === 'vendor' && <div className="flex justify-between items-center text-[11px] text-quill"><span>Expenses</span><span className="nums font-bold text-ink">{currencySymbol}{money(expenseTotal)}</span></div>}
             <div className="flex justify-between items-center pt-3 border-t border-hairline"><span className="text-[11px] font-bold text-quill">Total amount</span><span className="nums text-[15px] font-extrabold text-ink font-display">{currencySymbol}{money(totalAmount)}</span></div>
 
