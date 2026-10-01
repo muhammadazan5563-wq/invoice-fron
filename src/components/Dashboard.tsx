@@ -29,6 +29,7 @@ import InvoiceShowcase from './InvoiceShowcase';
 import Contacts from './Contacts';
 import Payment from './Payment';
 import UserHistory from './UserHistory';
+import ExpenseTracker from './ExpenseTracker';
 import { Contact, getContacts } from '../lib/contacts';
 import {
   LogOut,
@@ -63,7 +64,7 @@ interface DashboardProps {
   onTokenRefresh?: (newToken: string) => void;
 }
 
-type ViewState = 'dashboard' | 'vendor-dashboard' | 'create' | 'edit' | 'settings' | 'ledger' | 'payment' | 'contacts' | 'search';
+type ViewState = 'dashboard' | 'vendor-dashboard' | 'create' | 'edit' | 'settings' | 'ledger' | 'payment' | 'contacts' | 'search' | 'expenses';
 
 export default function Dashboard({ user, token, onLogout, onTokenRefresh }: DashboardProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -522,6 +523,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     { key: 'vendor-dashboard', label: 'Vendor dashboard' },
     { key: 'create', label: 'Invoice' },
     { key: 'ledger', label: 'Ledger' },
+    { key: 'expenses', label: 'Expenses' },
     { key: 'payment', label: 'Payment' },
     { key: 'contacts', label: 'Contacts' },
     { key: 'search', label: 'Search' },
@@ -547,6 +549,8 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
                 ? 'Contacts'
               : viewState === 'search'
                 ? 'Search history'
+              : viewState === 'expenses'
+                ? 'Expense tracker'
               : 'Settings';
 
   const pageSubtitle =
@@ -566,6 +570,8 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
                 ? 'Manage the vendors and customers connected to your ledger.'
               : viewState === 'search'
                 ? 'Search any customer or vendor’s complete invoice history.'
+              : viewState === 'expenses'
+                ? 'Track Baraf, Rickshaw Rent and Worker Expense across vendor invoices.'
               : 'Company profile, currency and sheet connection.';
 
   return (
@@ -1042,6 +1048,8 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
             onMarkAsPaid={handleMarkAsPaid}
           />
         )}
+
+        {viewState === 'expenses' && <ExpenseTracker template={invoiceTemplate} />}
 
         {/* ── Settings ──────────────────────────────────────── */}
         {viewState === 'settings' && (
