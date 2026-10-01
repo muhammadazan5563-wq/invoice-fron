@@ -191,13 +191,16 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   }, [payments]);
 
   useEffect(() => {
-    const currentBalance = normalizeCurrency(subtotal + subtotal * taxRate / 100 + (invoiceType === 'vendor' ? Object.values(expenses).reduce((sum, value) => sum + value, 0) : 0) - amountPaid);
+    const currentExpenseTotal = invoiceType === 'vendor' ? Object.values(expenses).reduce((sum, value) => sum + value, 0) : 0;
+    const currentCommissionBase = invoiceType === 'vendor' ? Math.max(0, subtotal - currentExpenseTotal) : subtotal;
+    const currentCommission = commissionAmount ?? currentCommissionBase * taxRate / 100;
+    const currentBalance = normalizeCurrency(subtotal + currentCommission + currentExpenseTotal - amountPaid);
     if (currentBalance <= 0) {
       setStatus('Paid');
     } else if (status === 'Paid') {
       setStatus('Due');
     }
-  }, [subtotal, taxRate, expenses, invoiceType, amountPaid, status]);
+  }, [subtotal, taxRate, expenses, invoiceType, commissionAmount, amountPaid, status]);
 
   const handleAddPayment = () => {
     const today = getTodayInTimezone(template?.timezone || 'UTC');
@@ -444,7 +447,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
           </div>
           <div><label htmlFor="inv-email" className={labelClass}>{invoiceType === 'vendor' ? 'Vendor email' : 'Customer email'}</label><input id="inv-email" type="email" value={customerEmail} readOnly={!!selectedContactId} onChange={(e) => setCustomerEmail(e.target.value)} className={fieldClass} placeholder="Email" /></div>
           <div><label htmlFor="inv-phone" className={labelClass}>Phone</label><input id="inv-phone" value={customerPhone} readOnly={!!selectedContactId} onChange={(e) => setCustomerPhone(e.target.value)} className={fieldClass} placeholder="Phone" /></div>
-          <div><label htmlFor="inv-type" className={labelClass}>Invoice type</label><select id="inv-type" disabled={!!invoice} value={invoiceType} onChange={(e) => { const nextType = e.target.value as 'customer' | 'vendor'; setInvoiceType(nextType); setContactSearch(''); setSelectedContactId(''); setCustomerName(''); setCustomerEmail(''); setCustomerPhone(''); setTaxRate(0); setCommissionAmount(0); if (nextType === 'customer') setExpenses({ baraf: 0, rickshawRent: 0, workerExpense: 0 }); }} className={fieldClass}><option value="customer">Customer sale</option><option value="vendor">Vendor purchase</option></select></div>
+          <div><label htmlFor="inv-type" className={labelClass}>Invoice type</label><select id="inv-type" disabled={!!invoice} value={invoiceType} onChange={(e) => { const nextType = e.target.value as 'customer' | 'vendor'; setInvoiceType(nextType); setContactSearch(''); setSelectedContactId(''); setCustomerName(''); setCustomerEmail(''); setCustomerPhone(''); setTaxRate(0); setCommissionAmount(null); if (nextType === 'customer') setExpenses({ baraf: 0, rickshawRent: 0, workerExpense: 0 }); }} className={fieldClass}><option value="customer">Customer sale</option><option value="vendor">Vendor purchase</option></select></div>
         </div>
 
         {/* Booking lines */}
