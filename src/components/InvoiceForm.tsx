@@ -63,6 +63,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   const [status, setStatus] = useState<FormStatus>('Pending');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<BookingItem[]>([emptyItem()]);
+  const [quantityInputs, setQuantityInputs] = useState<Record<number, string>>({});
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [subtotal, setSubtotal] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -122,6 +123,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
           ? invoice.items
           : [emptyItem()]
       );
+      setQuantityInputs({});
       setSubtotal(invoice.totalAmount);
 
       let initialPayments = invoice.payments || [];
@@ -150,6 +152,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
       setStatus('Due');
       setNotes(template?.paymentDetails || template?.defaultNotes || defaultNotes);
       setItems([emptyItem()]);
+      setQuantityInputs({});
       setPayments([{ amount: 0, date: today }]);
     }
   }, [invoice, suggestInvoiceId, template]);
@@ -194,7 +197,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
     const currentExpenseTotal = invoiceType === 'vendor' ? Object.values(expenses).reduce((sum, value) => sum + value, 0) : 0;
     const currentCommissionBase = invoiceType === 'vendor' ? Math.max(0, subtotal - currentExpenseTotal) : subtotal;
     const currentCommission = commissionAmount ?? currentCommissionBase * taxRate / 100;
-    const currentBalance = normalizeCurrency(subtotal + currentCommission + currentExpenseTotal - amountPaid);
+    const currentBalance = normalizeCurrency(subtotal + currentCommission - currentExpenseTotal - amountPaid);
     if (currentBalance <= 0) {
       setStatus('Paid');
     } else if (status === 'Paid') {
@@ -234,7 +237,9 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
     } else if (field === 'description') {
       currentItem.description = value;
     } else if (field === 'quantity') {
-      currentItem.quantity = Math.max(0, parseFloat(value) || 0);
+      const rawValue = String(value);
+      setQuantityInputs((previous) => ({ ...previous, [index]: rawValue }));
+      currentItem.quantity = rawValue === '' || rawValue === '.' ? 0 : Math.max(0, parseFloat(rawValue) || 0);
     } else if (field === 'checkIn') {
       currentItem.checkIn = value;
       currentItem.nights = calculateNights(value, currentItem.checkOut);
@@ -352,7 +357,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
   const calculatedCommissionAmount = commissionBase * taxRate / 100;
   const effectiveCommissionAmount = commissionAmount ?? calculatedCommissionAmount;
   const taxAmount = effectiveCommissionAmount;
-  const totalAmount = subtotal + effectiveCommissionAmount + expenseTotal;
+  const totalAmount = subtotal + effectiveCommissionAmount - expenseTotal;
   // Preserve original Change due behavior for real overpayments, but never
   // allow floating-point -0 to reach the receipt display.
   const balance = normalizeCurrency(totalAmount - amountPaid);
@@ -523,8 +528,9 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
                             required
                             pattern="[0-9]*[.]?[0-9]*"
                             aria-label={`Quantity in kilograms for line ${index + 1}`}
-                            value={item.quantity || ''}
+                            value={quantityInputs[index] ?? (item.quantity || '')}
                             onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                            onBlur={() => setQuantityInputs((previous) => { const next = { ...previous }; delete next[index]; return next; })}
                             className={`${cellClass} nums text-center`}
                             placeholder="0.00"
                           />
@@ -690,7 +696,10 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
                   type="text"
                   inputMode="decimal"
                   value={commissionAmount === null ? effectiveCommissionAmount || '' : commissionAmount}
-                  onChange={(e) => setCommissionAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                  onChange={(e) => {
+                    const rawValue = e.target.value.trim();
+                    setCommissionAmount(rawValue === '' ? null : Math.max(0, parseFloat(rawValue) || 0));
+                  }}
                   className="nums appearance-none w-28 bg-shell rounded-xl px-3 py-2 text-right text-[12px] font-bold text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand"
                   placeholder="0.00"
                 />
