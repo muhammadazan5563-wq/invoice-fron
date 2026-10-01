@@ -83,7 +83,15 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   const [invoiceTemplate, setInvoiceTemplate] = useState<InvoiceTemplate | null>(null);
   const [spreadsheetSettings, setSpreadsheetSettings] = useState<SpreadsheetSettings | null>(null);
 
-  const [viewState, setViewState] = useState<ViewState>('dashboard');
+  const [viewState, setViewState] = useState<ViewState>(() => {
+    try {
+      const savedView = sessionStorage.getItem(`invoice-dashboard-view-${user.uid}`) as ViewState | null;
+      const validViews: ViewState[] = ['dashboard', 'vendor-dashboard', 'create', 'edit', 'settings', 'ledger', 'payment', 'contacts', 'search', 'expenses'];
+      return savedView && validViews.includes(savedView) ? savedView : 'dashboard';
+    } catch {
+      return 'dashboard';
+    }
+  });
   const [editingInvoice, setEditingInvoice] = useState<Invoice | undefined>(undefined);
   const [showcaseSelection, setShowcaseSelection] = useState<Invoice | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -143,6 +151,17 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   useEffect(() => {
     fetchDashboardSummary();
   }, []);
+
+  useEffect(() => {
+    try {
+      // Do not restore an edit screen after refresh because its selected invoice
+      // is held in memory and cannot be reconstructed safely from view state alone.
+      if (viewState === 'edit' || viewState === 'create') return;
+      sessionStorage.setItem(`invoice-dashboard-view-${user.uid}`, viewState);
+    } catch {
+      // Session storage can be unavailable in privacy-restricted browsers.
+    }
+  }, [viewState, user.uid]);
 
   const fetchDashboardSummary = async () => {
     const requestId = ++summaryRequestRef.current;
@@ -280,7 +299,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
             return [existing || savedInvoice, ...previous.filter((invoice) => invoice.id !== savedInvoice.id)];
           });
         }
-        setViewState('dashboard');
+        setViewState(invoiceData.invoiceType === 'vendor' ? 'vendor-dashboard' : 'dashboard');
         setEditingInvoice(undefined);
         requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
       } catch (err: any) {
