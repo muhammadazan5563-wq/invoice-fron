@@ -271,7 +271,7 @@ export default function InvoicePublicView() {
                     Terms & conditions
                   </span>
                   <p className="text-[11px] text-quill leading-relaxed font-medium whitespace-pre-line">
-                    {invoiceTemplate.termsAndConditions || 'Payment is due within 30 days of invoice date.\nLate payments may incur additional charges.\nAll prices are in USD unless otherwise stated.'}
+                    {invoiceTemplate.termsAndConditions || 'Payment is due within 30 days of invoice date.\nLate payments may incur additional charges.\nAll prices are in PKR unless otherwise stated.'}
                   </p>
                 </div>
 
