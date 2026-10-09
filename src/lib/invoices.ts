@@ -15,8 +15,8 @@ export interface InvoicePageOptions {
   search?: string;
   status?: string;
   customerId?: string;
-  fromMonth?: string;
-  toMonth?: string;
+  fromDate?: string;
+  toDate?: string;
   invoiceType?: 'customer' | 'vendor';
 }
 
@@ -90,8 +90,8 @@ export async function getInvoicesPage(options: InvoicePageOptions = {}): Promise
   if (options.search?.trim()) params.set('search', options.search.trim());
   if (options.status && options.status !== 'All') params.set('status', options.status);
   if (options.customerId) params.set('customerId', options.customerId);
-  if (options.fromMonth) params.set('fromMonth', options.fromMonth);
-  if (options.toMonth) params.set('toMonth', options.toMonth);
+  if (options.fromDate) params.set('fromDate', options.fromDate);
+  if (options.toDate) params.set('toDate', options.toDate);
   if (options.invoiceType) params.set('invoiceType', options.invoiceType);
   const response = await apiRequest<any>(`/api/invoices?${params.toString()}`);
   const rows = Array.isArray(response) ? response : response?.invoices || [];
@@ -117,14 +117,19 @@ export async function getInvoiceHistory(contactId: string, invoiceType: 'custome
   const params = new URLSearchParams({ customerId: contactId, invoiceType, _ts: String(Date.now()) });
   const response = await apiRequest<{ invoices?: any[]; summary?: ContactInvoiceSummary }>(`/api/invoices/history?${params.toString()}`, { cache: 'no-store' });
   const invoices = (response.invoices || []).map(rowToInvoice);
-  return { invoices, summary: response.summary || { billed: 0, paid: 0, outstanding: 0, settled: 0, overdue: 0, invoiceCount: invoices.length } };
+  return { invoices, summary: response.summary || { billed: 0, paid: 0, overpaid: 0, outstanding: 0, settled: 0, overdue: 0, invoiceCount: invoices.length } };
 }
 
-export interface ContactInvoiceSummary { billed: number; paid: number; outstanding: number; settled: number; overdue: number; invoiceCount: number }
+export interface ContactInvoiceSummary { billed: number; paid: number; overpaid: number; outstanding: number; settled: number; overdue: number; invoiceCount: number }
 
 export async function getContactInvoiceSummary(contactId: string, invoiceType: 'customer' | 'vendor'): Promise<ContactInvoiceSummary> {
   const params = new URLSearchParams({ customerId: contactId, invoiceType, _ts: String(Date.now()) });
   return apiRequest<ContactInvoiceSummary>(`/api/contact-summary?${params.toString()}`, { cache: 'no-store' });
+}
+
+export async function getNextInvoiceId(): Promise<string> {
+  const response = await apiRequest<{ id: string }>('/api/invoices/next-id', { cache: 'no-store' });
+  return response.id;
 }
 
 export async function getLedgerInvoicesForDate(date: string): Promise<Invoice[]> {
