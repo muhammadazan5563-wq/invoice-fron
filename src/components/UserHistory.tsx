@@ -98,8 +98,8 @@ export default function UserHistory({ contacts, template, onEdit, onDelete, onMa
     const paid = filteredInvoices.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
     const outstanding = filteredInvoices.reduce((sum, invoice) => sum + Math.max(invoice.balance, 0), 0);
     const settled = filteredInvoices.filter((invoice) => invoice.balance <= 0).length;
-    const overdue = filteredInvoices.filter((invoice) => invoice.status === 'Overdue').length;
-    return { billed, paid, outstanding, settled, overdue };
+    const overpaid = filteredInvoices.reduce((sum, invoice) => sum + Math.max(-invoice.balance, 0), 0);
+    return { billed, paid, outstanding, settled, overpaid };
   }, [filteredInvoices]);
 
   const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + (fromDate ? 1 : 0) + (toDate ? 1 : 0) + (invoiceQuery.trim() ? 1 : 0);
@@ -169,7 +169,7 @@ export default function UserHistory({ contacts, template, onEdit, onDelete, onMa
     ['Total paid', money(displayedTotals.paid, currencySymbol), 'bg-mist text-ink', CheckCircle2],
     ['Outstanding', money(displayedTotals.outstanding, currencySymbol), 'bg-brand text-white', WalletCards],
     ['Settled invoices', String(displayedTotals.settled), 'bg-mist text-ink', CheckCircle2],
-    ['Overdue', String(displayedTotals.overdue), 'bg-[#fff1ec] text-[#a8492f]', Clock3],
+    ['Overpaid', money(displayedTotals.overpaid, currencySymbol), 'bg-[#eaf3ff] text-[#2d76c7]', WalletCards],
   ];
 
   return (
