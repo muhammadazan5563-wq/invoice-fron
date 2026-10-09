@@ -3,6 +3,7 @@ import { AppUser } from '../lib/auth';
 import { Invoice } from '../types';
 import {
   getInvoicesPage,
+  getNextInvoiceId,
   createInvoice,
   updateInvoice,
   deleteInvoice,
@@ -42,7 +43,6 @@ import {
   ArrowLeft,
   SlidersHorizontal,
   ChevronDown,
-  CalendarDays,
   FileText,
   Receipt,
   Wallet,
@@ -93,6 +93,9 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     }
   });
   const [editingInvoice, setEditingInvoice] = useState<Invoice | undefined>(undefined);
+  const [nextInvoiceId, setNextInvoiceId] = useState('');
+  const [returnViewState, setReturnViewState] = useState<ViewState | null>(null);
+  const [searchRefreshKey, setSearchRefreshKey] = useState(0);
   const [showcaseSelection, setShowcaseSelection] = useState<Invoice | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary | null>(null);
@@ -101,26 +104,26 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   // Filter strip state — drives the ledger + showcase below
   const [customerFilter, setCustomerFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [fromMonth, setFromMonth] = useState('');
-  const [toMonth, setToMonth] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [invoiceQuery, setInvoiceQuery] = useState('');
   const [vendorCustomerFilter, setVendorCustomerFilter] = useState('all');
   const [vendorStatusFilter, setVendorStatusFilter] = useState('all');
-  const [vendorFromMonth, setVendorFromMonth] = useState('');
-  const [vendorToMonth, setVendorToMonth] = useState('');
+  const [vendorFromDate, setVendorFromDate] = useState('');
+  const [vendorToDate, setVendorToDate] = useState('');
   const [vendorInvoiceQuery, setVendorInvoiceQuery] = useState('');
   const [appliedFilters, setAppliedFilters] = useState({
     customerId: '',
     status: '',
-    fromMonth: '',
-    toMonth: '',
+    fromDate: '',
+    toDate: '',
     search: '',
   });
   const [appliedVendorFilters, setAppliedVendorFilters] = useState({
     customerId: '',
     status: '',
-    fromMonth: '',
-    toMonth: '',
+    fromDate: '',
+    toDate: '',
     search: '',
   });
 
@@ -151,6 +154,11 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   useEffect(() => {
     fetchDashboardSummary();
   }, []);
+
+  useEffect(() => {
+    if (viewState !== 'create' || editingInvoice) return;
+    getNextInvoiceId().then(setNextInvoiceId).catch((err) => console.warn('Could not load next invoice number:', err));
+  }, [viewState, editingInvoice]);
 
   useEffect(() => {
     try {
@@ -214,8 +222,8 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         invoiceType: 'customer',
         customerId: filters.customerId || undefined,
         status: filters.status || undefined,
-        fromMonth: filters.fromMonth || undefined,
-        toMonth: filters.toMonth || undefined,
+        fromDate: filters.fromDate || undefined,
+        toDate: filters.toDate || undefined,
         search: filters.search || undefined,
       });
       const vendorPromise = getInvoicesPage({
@@ -224,8 +232,8 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
           invoiceType: 'vendor',
           customerId: vendorFilters.customerId || undefined,
           status: vendorFilters.status || undefined,
-          fromMonth: vendorFilters.fromMonth || undefined,
-          toMonth: vendorFilters.toMonth || undefined,
+          fromDate: vendorFilters.fromDate || undefined,
+          toDate: vendorFilters.toDate || undefined,
           search: vendorFilters.search || undefined,
         }).catch((vendorError) => {
           console.warn('Vendor invoices are unavailable:', vendorError);
@@ -299,7 +307,10 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
             return [existing || savedInvoice, ...previous.filter((invoice) => invoice.id !== savedInvoice.id)];
           });
         }
-        setViewState(invoiceData.invoiceType === 'vendor' ? 'vendor-dashboard' : 'dashboard');
+        const destination = returnViewState || (invoiceData.invoiceType === 'vendor' ? 'vendor-dashboard' : 'dashboard');
+        setViewState(destination);
+        if (destination === 'search') setSearchRefreshKey((key) => key + 1);
+        setReturnViewState(null);
         setEditingInvoice(undefined);
         requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
       } catch (err: any) {
@@ -423,6 +434,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         await deleteInvoice(invoice.id, invoice.invoiceType || 'customer');
         setShowcaseSelection(null);
         await fetchInvoices();
+        if (viewState === 'search') setSearchRefreshKey((key) => key + 1);
       } catch (err: any) {
         setError(`Failed to delete invoice: ${err.message}`);
       } finally {
@@ -452,56 +464,35 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     .filter((contact) => contact.type === 'vendor')
     .sort((a, b) => a.fullName.localeCompare(b.fullName));
 
-  const monthsSet = new Set<string>();
-  invoices.forEach((inv) => {
-    const d = new Date(inv.date);
-    if (!isNaN(d.getTime())) {
-      monthsSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-    }
-  });
-  const months: string[] = Array.from(monthsSet).sort();
-  const vendorMonthsSet = new Set<string>();
-  vendorInvoices.forEach((inv) => {
-    const d = new Date(inv.date);
-    if (!isNaN(d.getTime())) vendorMonthsSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-  });
-  const vendorMonths: string[] = Array.from(vendorMonthsSet).sort();
-
-  const monthLabel = (key: string) => {
-    const [y, m] = key.split('-');
-    const d = new Date(Number(y), Number(m) - 1, 1);
-    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  };
-
   // The API returns the filtered page, so totals and pagination represent all matches.
   const filteredInvoices = invoices;
 
   const activeFilterCount =
     (customerFilter !== 'all' ? 1 : 0) +
     (statusFilter !== 'all' ? 1 : 0) +
-    (fromMonth ? 1 : 0) +
-    (toMonth ? 1 : 0) +
+    (fromDate ? 1 : 0) +
+    (toDate ? 1 : 0) +
     (invoiceQuery.trim() ? 1 : 0);
   const activeVendorFilterCount =
     (vendorCustomerFilter !== 'all' ? 1 : 0) +
     (vendorStatusFilter !== 'all' ? 1 : 0) +
-    (vendorFromMonth ? 1 : 0) +
-    (vendorToMonth ? 1 : 0) +
+    (vendorFromDate ? 1 : 0) +
+    (vendorToDate ? 1 : 0) +
     (vendorInvoiceQuery.trim() ? 1 : 0);
 
   const resetFilters = () => {
     setCustomerFilter('all');
     setStatusFilter('all');
-    setFromMonth('');
-    setToMonth('');
+    setFromDate('');
+    setToDate('');
     setInvoiceQuery('');
-    const nextFilters = { customerId: '', status: '', fromMonth: '', toMonth: '', search: '' };
+    const nextFilters = { customerId: '', status: '', fromDate: '', toDate: '', search: '' };
     setVendorCustomerFilter('all');
     setVendorStatusFilter('all');
     setVendorFromMonth('');
     setVendorToMonth('');
     setVendorInvoiceQuery('');
-    const nextVendorFilters = { customerId: '', status: '', fromMonth: '', toMonth: '', search: '' };
+    const nextVendorFilters = { customerId: '', status: '', fromDate: '', toDate: '', search: '' };
     setAppliedFilters(nextFilters);
     setAppliedVendorFilters(nextVendorFilters);
     fetchInvoices(false, nextFilters, nextVendorFilters);
@@ -511,8 +502,8 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     const nextFilters = {
       customerId: customerFilter === 'all' ? '' : customerFilter,
       status: statusFilter === 'all' ? '' : statusFilter,
-      fromMonth,
-      toMonth,
+      fromDate,
+      toDate,
       search: invoiceQuery.trim(),
     };
     setAppliedFilters(nextFilters);
@@ -523,8 +514,8 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     const nextFilters = {
       customerId: vendorCustomerFilter === 'all' ? '' : vendorCustomerFilter,
       status: vendorStatusFilter === 'all' ? '' : vendorStatusFilter,
-      fromMonth: vendorFromMonth,
-      toMonth: vendorToMonth,
+      fromDate: vendorFromDate,
+      toDate: vendorToDate,
       search: vendorInvoiceQuery.trim(),
     };
     setAppliedVendorFilters(nextFilters);
@@ -799,6 +790,10 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
               onSync={fetchInvoices}
               loadingSync={loadingInvoices}
             />
+            <section className="bg-shell rounded-[22px] px-5 py-4 flex items-center justify-between shadow-[0_18px_40px_-32px_rgba(19,17,38,0.5)]">
+              <div><p className="text-[10px] font-bold text-quill-soft uppercase tracking-wider">Overpaid</p><p className="text-[12px] text-quill-soft mt-1">Credit received above invoice totals</p></div>
+              <p className="nums text-[22px] font-extrabold text-[#2d76c7]">{currencySymbol} {Math.round(dashboardSummary?.totalOverpaid || 0).toLocaleString('en-US')}</p>
+            </section>
 
             {/* Filter strip */}
             <div className="flex flex-wrap items-center gap-2.5 py-1" id="filter-strip">
@@ -839,35 +834,9 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
                 <ChevronDown className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
 
-              <div className="relative">
-                <select
-                  value={fromMonth}
-                  onChange={(e) => setFromMonth(e.target.value)}
-                  aria-label="From month"
-                  className="select-bare bg-mist hover:bg-mist-2 text-[12px] font-semibold text-ink pl-4 pr-10 py-3 rounded-full cursor-pointer transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand min-w-[160px]"
-                >
-                  <option value="">From: any month</option>
-                  {months.map((m) => (
-                    <option key={m} value={m}>{monthLabel(m)}</option>
-                  ))}
-                </select>
-                <CalendarDays className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
+              <label className="relative flex items-center gap-2 bg-mist hover:bg-mist-2 rounded-full px-4 py-2.5 text-[12px] font-semibold text-ink"><span className="text-quill">From</span><input type="date" value={fromDate} max={toDate || undefined} onChange={(e) => setFromDate(e.target.value)} aria-label="From date" className="bg-transparent outline-none cursor-pointer" /></label>
 
-              <div className="relative">
-                <select
-                  value={toMonth}
-                  onChange={(e) => setToMonth(e.target.value)}
-                  aria-label="To month"
-                  className="select-bare bg-mist hover:bg-mist-2 text-[12px] font-semibold text-ink pl-4 pr-10 py-3 rounded-full cursor-pointer transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand min-w-[160px]"
-                >
-                  <option value="">To: any month</option>
-                  {months.map((m) => (
-                    <option key={m} value={m}>{monthLabel(m)}</option>
-                  ))}
-                </select>
-                <CalendarDays className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
+              <label className="relative flex items-center gap-2 bg-mist hover:bg-mist-2 rounded-full px-4 py-2.5 text-[12px] font-semibold text-ink"><span className="text-quill">To</span><input type="date" value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} aria-label="To date" className="bg-transparent outline-none cursor-pointer" /></label>
 
               <div className="relative flex-1 min-w-[160px] max-w-[260px]">
                 <input
@@ -964,6 +933,10 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         {viewState === 'vendor-dashboard' && (
           <div className="space-y-6 animate-fade-in" id="vendor-dashboard-panels">
             <KpiCards mode="vendor" invoices={vendorInvoices} summary={vendorDashboardSummary} currencySymbol={currencySymbol} workspaceImage={WORKSPACE_IMAGE} onOpenLedger={() => setViewState('ledger')} template={invoiceTemplate} onCreateInvoice={() => { setEditingInvoice(undefined); setViewState('create'); }} onSync={fetchInvoices} loadingSync={loadingInvoices} />
+            <section className="bg-shell rounded-[22px] px-5 py-4 flex items-center justify-between shadow-[0_18px_40px_-32px_rgba(19,17,38,0.5)]">
+              <div><p className="text-[10px] font-bold text-quill-soft uppercase tracking-wider">Overpaid</p><p className="text-[12px] text-quill-soft mt-1">Credit received above invoice totals</p></div>
+              <p className="nums text-[22px] font-extrabold text-[#2d76c7]">{currencySymbol} {Math.round(vendorDashboardSummary?.totalOverpaid || 0).toLocaleString('en-US')}</p>
+            </section>
             <div className="flex flex-wrap items-center gap-2.5 py-1" id="vendor-filter-strip">
               <div className="flex items-center gap-2 mr-1">
                 <span className="text-[12px] font-bold text-ink">Active filters</span>
@@ -983,20 +956,8 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
                 </select>
                 <ChevronDown className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
-              <div className="relative">
-                <select value={vendorFromMonth} onChange={(e) => setVendorFromMonth(e.target.value)} aria-label="From vendor invoice month" className="select-bare bg-mist hover:bg-mist-2 text-[12px] font-semibold text-ink pl-4 pr-10 py-3 rounded-full cursor-pointer transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand min-w-[160px]">
-                  <option value="">From: any month</option>
-                  {vendorMonths.map((month) => <option key={month} value={month}>{monthLabel(month)}</option>)}
-                </select>
-                <CalendarDays className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
-              <div className="relative">
-                <select value={vendorToMonth} onChange={(e) => setVendorToMonth(e.target.value)} aria-label="To vendor invoice month" className="select-bare bg-mist hover:bg-mist-2 text-[12px] font-semibold text-ink pl-4 pr-10 py-3 rounded-full cursor-pointer transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand min-w-[160px]">
-                  <option value="">To: any month</option>
-                  {vendorMonths.map((month) => <option key={month} value={month}>{monthLabel(month)}</option>)}
-                </select>
-                <CalendarDays className="w-3.5 h-3.5 text-quill absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
+              <label className="relative flex items-center gap-2 bg-mist hover:bg-mist-2 rounded-full px-4 py-2.5 text-[12px] font-semibold text-ink"><span className="text-quill">From</span><input type="date" value={vendorFromDate} max={vendorToDate || undefined} onChange={(e) => setVendorFromDate(e.target.value)} aria-label="From vendor date" className="bg-transparent outline-none cursor-pointer" /></label>
+              <label className="relative flex items-center gap-2 bg-mist hover:bg-mist-2 rounded-full px-4 py-2.5 text-[12px] font-semibold text-ink"><span className="text-quill">To</span><input type="date" value={vendorToDate} min={vendorFromDate || undefined} onChange={(e) => setVendorToDate(e.target.value)} aria-label="To vendor date" className="bg-transparent outline-none cursor-pointer" /></label>
               <div className="relative flex-1 min-w-[160px] max-w-[260px]">
                 <input type="text" value={vendorInvoiceQuery} onChange={(e) => setVendorInvoiceQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') applyVendorFilters(); }} placeholder="Enter invoice #" aria-label="Search vendor invoices" className="w-full bg-mist hover:bg-mist-2 focus:bg-mist-2 text-[12px] font-semibold text-ink placeholder:text-quill-soft placeholder:font-medium pl-4 pr-10 py-2.5 rounded-full outline-none transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" />
                 <Search className="w-4 h-4 text-quill absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1016,7 +977,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
               invoice={editingInvoice}
               contacts={contacts}
               suggestInvoiceId={
-                viewState === 'create' ? `INV-${Math.floor(1000 + Math.random() * 9000)}` : undefined
+                viewState === 'create' ? (nextInvoiceId || undefined) : undefined
               }
               onSave={handleSaveInvoice}
               onCancel={() => {
@@ -1057,10 +1018,12 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
 
         {viewState === 'search' && (
           <UserHistory
+            key={searchRefreshKey}
             contacts={contacts}
             template={invoiceTemplate}
             onEdit={(invoice) => {
               setEditingInvoice(invoice);
+              setReturnViewState('search');
               setViewState('edit');
             }}
             onDelete={handleDeleteInvoice}
