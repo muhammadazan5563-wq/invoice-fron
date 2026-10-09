@@ -164,6 +164,42 @@ export default function InvoicePublicView() {
 
   return (
     <div className="min-h-screen bg-canvas px-3 sm:px-5 py-4 sm:py-6 print:bg-white print:p-0">
+      <style>{`
+        @media (max-width: 480px) {
+          .track-invoice-table-shell {
+            max-width: 480px;
+            overflow: hidden;
+          }
+          .track-invoice-items-table {
+            table-layout: fixed;
+            width: 100%;
+          }
+          .track-invoice-items-table th,
+          .track-invoice-items-table td {
+            vertical-align: top;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }
+          .track-invoice-items-table th:nth-child(1),
+          .track-invoice-items-table td:nth-child(1) { width: 20%; }
+          .track-invoice-items-table th:nth-child(2),
+          .track-invoice-items-table td:nth-child(2) { width: 28%; }
+          .track-invoice-items-table th:nth-child(3),
+          .track-invoice-items-table td:nth-child(3) { width: 17%; }
+          .track-invoice-items-table th:nth-child(4),
+          .track-invoice-items-table td:nth-child(4) { width: 17%; }
+          .track-invoice-items-table th:nth-child(5),
+          .track-invoice-items-table td:nth-child(5) { width: 18%; }
+          .track-invoice-items-table--vendor th:nth-child(1),
+          .track-invoice-items-table--vendor td:nth-child(1) { width: 25%; }
+          .track-invoice-items-table--vendor th:nth-child(2),
+          .track-invoice-items-table--vendor td:nth-child(2) { width: 30%; }
+          .track-invoice-items-table--vendor th:nth-child(3),
+          .track-invoice-items-table--vendor td:nth-child(3) { width: 20%; }
+          .track-invoice-items-table--vendor th:nth-child(4),
+          .track-invoice-items-table--vendor td:nth-child(4) { width: 25%; }
+        }
+      `}</style>
       <div className="max-w-[900px] mx-auto">
         {/* Header */}
         <header className="flex items-center justify-between gap-4 mb-6 print:hidden">
@@ -236,8 +272,8 @@ export default function InvoicePublicView() {
 
               {/* Line Items Table */}
               {invoice.items && invoice.items.length > 0 && (
-                <div className="bg-mist rounded-[18px] overflow-hidden">
-                  <table className="w-full text-left border-collapse">
+                <div className="track-invoice-table-shell bg-mist rounded-[18px] overflow-hidden">
+                  <table className={`track-invoice-items-table ${invoice.invoiceType === 'vendor' ? 'track-invoice-items-table--vendor' : ''} w-full text-left border-collapse`}>
                     <thead>
                       <tr className="text-quill font-bold text-[10px] uppercase tracking-wider">
                         <th className="py-3.5 px-4">Fish species</th>
