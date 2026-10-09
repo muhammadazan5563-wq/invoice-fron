@@ -192,16 +192,16 @@ export default function InvoicePublicView() {
           .track-invoice-items-table tbody {
             font-size: 8.8px !important;
           }
-          .track-invoice-items-table:not(.track-invoice-items-table--vendor) th:nth-child(5),
-          .track-invoice-items-table:not(.track-invoice-items-table--vendor) td:nth-child(5) { display: none; }
           .track-invoice-items-table th:nth-child(1),
-          .track-invoice-items-table td:nth-child(1) { width: 25%; }
+          .track-invoice-items-table td:nth-child(1) { width: 20%; }
           .track-invoice-items-table th:nth-child(2),
-          .track-invoice-items-table td:nth-child(2) { width: 30%; }
+          .track-invoice-items-table td:nth-child(2) { width: 25%; }
           .track-invoice-items-table th:nth-child(3),
-          .track-invoice-items-table td:nth-child(3) { width: 20%; }
+          .track-invoice-items-table td:nth-child(3) { width: 15%; }
           .track-invoice-items-table th:nth-child(4),
-          .track-invoice-items-table td:nth-child(4) { width: 25%; }
+          .track-invoice-items-table td:nth-child(4) { width: 20%; }
+          .track-invoice-items-table th:nth-child(5),
+          .track-invoice-items-table td:nth-child(5) { width: 20%; }
           .track-invoice-items-table--vendor th:nth-child(1),
           .track-invoice-items-table--vendor td:nth-child(1) { width: 25%; }
           .track-invoice-items-table--vendor th:nth-child(2),
