@@ -3,6 +3,7 @@ import { Invoice, BookingItem, PaymentRecord, InvoiceExpenses } from '../types';
 import { Contact } from '../lib/contacts';
 import { InvoiceTemplate, getCurrencySymbol } from '../lib/settings';
 import { getTodayInTimezone } from '../lib/timezone';
+import { apiRequest } from '../lib/api';
 import { Plus, Trash2, ArrowLeft, Save, Sparkles, Calculator } from 'lucide-react';
 
 interface InvoiceFormProps {
@@ -136,7 +137,12 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
       setPayments(initialPayments);
     } else {
       const today = getTodayInTimezone(template?.timezone || 'UTC');
-      setId(suggestInvoiceId || `INV-${Math.floor(1000 + Math.random() * 9000)}`);
+      setId(suggestInvoiceId || '');
+      if (!suggestInvoiceId) {
+        apiRequest<{ id: string }>('/api/invoices/next-id', { cache: 'no-store' })
+          .then((response) => setId(response.id))
+          .catch(() => setId(`INV-${String(new Date().getFullYear()).slice(-2)}001`));
+      }
       setDate(today);
       setInvoiceType('customer');
       setCustomerName('');
