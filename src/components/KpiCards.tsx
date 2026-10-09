@@ -26,7 +26,7 @@ interface KpiCardsProps {
   summary?: DashboardSummary | null;
 }
 
-export interface DashboardSummary { totalInvoices: number; totalRevenue: number; totalPaid: number; totalPending: number; paidCount: number; pendingCount: number; overdueCount: number; overdueAmount: number; dueAmount: number; averageInvoice: number; todayCollection: number; todayPaidCount: number; todayPendingCount: number; }
+export interface DashboardSummary { totalInvoices: number; totalRevenue: number; totalPaid: number; totalOverpaid: number; totalPending: number; paidCount: number; pendingCount: number; overdueCount: number; overdueAmount: number; dueAmount: number; averageInvoice: number; todayCollection: number; todayPaidCount: number; todayPendingCount: number; }
 
 const money = (n: number) =>
   n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -46,6 +46,7 @@ export default function KpiCards({
   let totalRevenue = 0;
   let totalPaid = 0;
   let totalPending = 0;
+  let totalOverpaid = 0;
   let overdueCount = 0;
   let overdueAmount = 0;
 
@@ -54,6 +55,7 @@ export default function KpiCards({
     totalRevenue += inv.totalAmount;
     totalPaid += inv.amountPaid;
     totalPending += inv.balance;
+    totalOverpaid += Math.max(0, inv.amountPaid - inv.totalAmount);
     if (inv.status === 'Overdue') {
       overdueCount += 1;
       overdueAmount += inv.balance;
@@ -63,6 +65,7 @@ export default function KpiCards({
     totalRevenue = summary.totalRevenue;
     totalPaid = summary.totalPaid;
     totalPending = summary.totalPending;
+    totalOverpaid = summary.totalOverpaid;
     overdueCount = summary.overdueCount;
     overdueAmount = summary.overdueAmount;
   }
@@ -153,7 +156,7 @@ export default function KpiCards({
             )}
           </div>
 
-          {/* Mini Stats: Collected / Pending / Overdue */}
+          {/* Mini Stats: Collected / Pending / Overpaid */}
           <div className="grid grid-cols-3 gap-3 mt-5">
             <div className="bg-[#e8f7ee] rounded-[18px] p-3.5 text-center">
               <div className="flex items-center justify-center gap-1.5 text-[#2f6b48] mb-1">
@@ -173,12 +176,12 @@ export default function KpiCards({
                 {currencySymbol}{money(totalPending)}
               </span>
             </div>
-            <div className="bg-[#fdeeea] rounded-[18px] p-3.5 text-center">
-              <div className="flex items-center justify-center gap-1.5 text-[#a8492f] mb-1">
-                <AlertCircle className="w-3.5 h-3.5" />
-                <span className="text-[9px] font-bold uppercase tracking-wider">{isVendor ? 'Overdue payable' : 'Overdue'}</span>
+            <div className="bg-[#eaf3ff] rounded-[18px] p-3.5 text-center">
+              <div className="flex items-center justify-center gap-1.5 text-[#2d76c7] mb-1">
+                <Banknote className="w-3.5 h-3.5" />
+                <span className="text-[9px] font-bold uppercase tracking-wider">Overpaid</span>
               </div>
-              <span className="nums text-[15px] font-extrabold text-[#a8492f]">{overdueCount}</span>
+              <span className="nums text-[15px] font-extrabold text-[#2d76c7]">{currencySymbol}{money(totalOverpaid)}</span>
             </div>
           </div>
         </div>
