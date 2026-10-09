@@ -179,18 +179,18 @@ export default function InvoicePublicView() {
             vertical-align: top;
             overflow-wrap: anywhere;
             word-break: break-word;
-            padding-top: 10px !important;
-            padding-bottom: 10px !important;
+            padding-top: 11px !important;
+            padding-bottom: 11px !important;
             padding-left: 6px !important;
             padding-right: 6px !important;
             line-height: 1.15;
           }
           .track-invoice-items-table th {
-            font-size: 7.3px !important;
+            font-size: 7.6px !important;
             letter-spacing: 0.04em !important;
           }
           .track-invoice-items-table tbody {
-            font-size: 8.8px !important;
+            font-size: 9.1px !important;
           }
           .track-invoice-items-table th:nth-child(1),
           .track-invoice-items-table td:nth-child(1) { width: 20%; }
