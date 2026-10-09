@@ -276,10 +276,10 @@ export default function InvoicePublicView() {
                   <table className={`track-invoice-items-table ${invoice.invoiceType === 'vendor' ? 'track-invoice-items-table--vendor' : ''} w-full text-left border-collapse`}>
                     <thead>
                       <tr className="text-quill font-bold text-[10px] uppercase tracking-wider">
-                        <th className="py-3.5 px-4">Fish species</th>
+                        <th className="py-3.5 px-4"><span className="hidden sm:inline">Fish species</span><span className="sm:hidden">Fish</span></th>
                         <th className="py-3.5 px-4">Description</th>
-                        <th className="py-3.5 px-4 text-center">Quantity (kg)</th>
-                        {invoice.invoiceType !== 'vendor' && <th className="py-3.5 px-4 text-right">Rate / kg</th>}
+                        <th className="py-3.5 px-4 text-center"><span className="hidden sm:inline">Quantity (kg)</span><span className="sm:hidden">Qty (kg)</span></th>
+                        {invoice.invoiceType !== 'vendor' && <th className="py-3.5 px-4 text-right"><span className="hidden sm:inline">Rate / kg</span><span className="sm:hidden">Rate/kg</span></th>}
                         <th className="py-3.5 px-4 text-right">Amount</th>
                       </tr>
                     </thead>
