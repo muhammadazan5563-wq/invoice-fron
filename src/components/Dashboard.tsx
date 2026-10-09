@@ -489,8 +489,8 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     const nextFilters = { customerId: '', status: '', fromDate: '', toDate: '', search: '' };
     setVendorCustomerFilter('all');
     setVendorStatusFilter('all');
-    setVendorFromMonth('');
-    setVendorToMonth('');
+    setVendorFromDate('');
+    setVendorToDate('');
     setVendorInvoiceQuery('');
     const nextVendorFilters = { customerId: '', status: '', fromDate: '', toDate: '', search: '' };
     setAppliedFilters(nextFilters);
