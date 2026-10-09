@@ -790,10 +790,6 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
               onSync={fetchInvoices}
               loadingSync={loadingInvoices}
             />
-            <section className="bg-shell rounded-[22px] px-5 py-4 flex items-center justify-between shadow-[0_18px_40px_-32px_rgba(19,17,38,0.5)]">
-              <div><p className="text-[10px] font-bold text-quill-soft uppercase tracking-wider">Overpaid</p><p className="text-[12px] text-quill-soft mt-1">Credit received above invoice totals</p></div>
-              <p className="nums text-[22px] font-extrabold text-[#2d76c7]">{currencySymbol} {Math.round(dashboardSummary?.totalOverpaid || 0).toLocaleString('en-US')}</p>
-            </section>
 
             {/* Filter strip */}
             <div className="flex flex-wrap items-center gap-2.5 py-1" id="filter-strip">
@@ -933,10 +929,6 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         {viewState === 'vendor-dashboard' && (
           <div className="space-y-6 animate-fade-in" id="vendor-dashboard-panels">
             <KpiCards mode="vendor" invoices={vendorInvoices} summary={vendorDashboardSummary} currencySymbol={currencySymbol} workspaceImage={WORKSPACE_IMAGE} onOpenLedger={() => setViewState('ledger')} template={invoiceTemplate} onCreateInvoice={() => { setEditingInvoice(undefined); setViewState('create'); }} onSync={fetchInvoices} loadingSync={loadingInvoices} />
-            <section className="bg-shell rounded-[22px] px-5 py-4 flex items-center justify-between shadow-[0_18px_40px_-32px_rgba(19,17,38,0.5)]">
-              <div><p className="text-[10px] font-bold text-quill-soft uppercase tracking-wider">Overpaid</p><p className="text-[12px] text-quill-soft mt-1">Credit received above invoice totals</p></div>
-              <p className="nums text-[22px] font-extrabold text-[#2d76c7]">{currencySymbol} {Math.round(vendorDashboardSummary?.totalOverpaid || 0).toLocaleString('en-US')}</p>
-            </section>
             <div className="flex flex-wrap items-center gap-2.5 py-1" id="vendor-filter-strip">
               <div className="flex items-center gap-2 mr-1">
                 <span className="text-[12px] font-bold text-ink">Active filters</span>
