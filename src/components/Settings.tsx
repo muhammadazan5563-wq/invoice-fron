@@ -518,14 +518,14 @@ export default function Settings({ user, token, onClose, onSettingsSaved }: Sett
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-quill uppercase tracking-wider mb-2">
-                      Default Hotel Name
+                      Default Name
                     </label>
                     <input
                       type="text"
                       value={defaultHotelName}
                       onChange={(e) => setDefaultHotelName(e.target.value)}
                       className="w-full bg-mist border border-hairline focus:bg-shell focus:bg-mist-2 rounded-xl px-4 py-3 text-ink placeholder:text-quill-soft focus:outline-none transition-all text-sm"
-                      placeholder="e.g. FAIZ GROUP HOTEL"
+                      placeholder="e.g. FAIZ GROUP "
                     />
                   </div>
                 </div>
