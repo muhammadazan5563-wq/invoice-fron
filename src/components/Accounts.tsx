@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Building2, Loader2, Printer, RefreshCw, Users, WalletCards } from 'lucide-react';
+import { Building2, Download, Loader2, RefreshCw, Users, WalletCards } from 'lucide-react';
 import { apiRequest } from '../lib/api';
 import { InvoiceTemplate, getCurrencySymbol } from '../lib/settings';
 
@@ -63,6 +63,29 @@ export default function Accounts({ template }: AccountsProps) {
     return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-GB');
   };
 
+  const downloadCsv = () => {
+    const headers = ['Name', 'Company', 'Outstanding balance', 'Overpaid', 'Last invoice date', 'Last invoice total'];
+    const escapeCsv = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const rows = accounts.map((account) => [
+      account.name,
+      account.companyName,
+      account.outstanding,
+      account.overpaid,
+      account.lastInvoiceDate || '',
+      account.lastInvoice ? account.lastInvoiceTotal : '',
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map(escapeCsv).join(',')).join('\r\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${accountType}-accounts.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="accounts-print-root space-y-6">
       <style>{`
@@ -87,8 +110,8 @@ export default function Accounts({ template }: AccountsProps) {
           <button type="button" onClick={loadAccounts} disabled={loading} className="flex items-center gap-2 bg-mist hover:bg-mist-2 text-ink text-[12px] font-bold px-4 py-3 rounded-full cursor-pointer disabled:opacity-50">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </button>
-          <button type="button" onClick={() => window.print()} className="flex items-center gap-2 bg-brand hover:bg-brand-mid text-white text-[12px] font-bold px-4 py-3 rounded-full cursor-pointer">
-            <Printer className="w-3.5 h-3.5" /> Print / Save PDF
+          <button type="button" onClick={downloadCsv} disabled={loading || accounts.length === 0} className="flex items-center gap-2 bg-brand hover:bg-brand-mid text-white text-[12px] font-bold px-4 py-3 rounded-full cursor-pointer disabled:opacity-50">
+            <Download className="w-3.5 h-3.5" /> Download CSV
           </button>
         </div>
       </div>
@@ -109,8 +132,8 @@ export default function Accounts({ template }: AccountsProps) {
         {loading ? <div className="py-16 text-center text-quill"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-3" /><p className="text-[12px] font-semibold">Loading accounts…</p></div> : accounts.length === 0 ? <div className="py-16 text-center text-quill-soft text-[12px] font-semibold">No {accountType} accounts found.</div> : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left border-collapse">
-              <thead><tr className="bg-mist/60 border-b border-hairline"><th className="px-5 sm:px-7 py-3 text-[10px] font-bold text-quill uppercase tracking-wider">Name</th><th className="px-4 py-3 text-[10px] font-bold text-quill uppercase tracking-wider">Email</th><th className="px-4 py-3 text-right text-[10px] font-bold text-quill uppercase tracking-wider">Outstanding balance</th><th className="px-4 py-3 text-[10px] font-bold text-quill uppercase tracking-wider">Last invoice</th><th className="px-5 sm:px-7 py-3 text-right text-[10px] font-bold text-quill uppercase tracking-wider">Last invoice total</th></tr></thead>
-              <tbody>{accounts.map((account) => <tr key={account.id} className="border-b border-hairline last:border-0 hover:bg-mist/40"><td className="px-5 sm:px-7 py-4"><div className="text-[13px] font-extrabold text-ink">{account.name || '—'}</div>{account.companyName && <div className="text-[11px] text-quill-soft mt-0.5">{account.companyName}</div>}</td><td className="px-4 py-4 text-[12px] font-semibold text-quill break-all">{account.email || '—'}</td><td className={`nums px-4 py-4 text-right text-[13px] font-extrabold ${account.outstanding > 0 ? 'text-[#b36d19]' : 'text-[#3f9c68]'}`}>{money(account.outstanding, currencySymbol)}{account.overpaid > 0 && <div className="text-[10px] font-bold text-[#2d76c7] mt-1">Credit {money(account.overpaid, currencySymbol)}</div>}</td><td className="px-4 py-4"><div className="text-[12px] font-bold text-ink">{account.lastInvoice ? `#${account.lastInvoice}` : '—'}</div><div className="text-[11px] text-quill-soft mt-0.5">{formatDate(account.lastInvoiceDate)}</div></td><td className="nums px-5 sm:px-7 py-4 text-right text-[13px] font-extrabold text-ink">{account.lastInvoice ? money(account.lastInvoiceTotal, currencySymbol) : '—'}</td></tr>)}</tbody>
+              <thead><tr className="bg-mist/60 border-b border-hairline"><th className="px-5 sm:px-7 py-3 text-[10px] font-bold text-quill uppercase tracking-wider">Name</th><th className="px-4 py-3 text-[10px] font-bold text-quill uppercase tracking-wider">Email</th><th className="px-4 py-3 text-[10px] font-bold text-quill uppercase tracking-wider">Last invoice</th><th className="px-4 py-3 text-right text-[10px] font-bold text-quill uppercase tracking-wider">Last invoice total</th><th className="px-5 sm:px-7 py-3 text-right text-[10px] font-bold text-quill uppercase tracking-wider">Outstanding balance</th></tr></thead>
+              <tbody>{accounts.map((account) => <tr key={account.id} className="border-b border-hairline last:border-0 hover:bg-mist/40"><td className="px-5 sm:px-7 py-4"><div className="text-[13px] font-extrabold text-ink">{account.name || '—'}</div>{account.companyName && <div className="text-[11px] text-quill-soft mt-0.5">{account.companyName}</div>}</td><td className="px-4 py-4 text-[12px] font-semibold text-quill break-all">{account.email || '—'}</td><td className="px-4 py-4"><div className="text-[12px] font-bold text-ink">{account.lastInvoice ? `#${account.lastInvoice}` : '—'}</div><div className="text-[11px] text-quill-soft mt-0.5">{formatDate(account.lastInvoiceDate)}</div></td><td className="nums px-4 py-4 text-right text-[13px] font-extrabold text-ink">{account.lastInvoice ? money(account.lastInvoiceTotal, currencySymbol) : '—'}</td><td className={`nums px-5 sm:px-7 py-4 text-right text-[13px] font-extrabold ${account.outstanding > 0 ? 'text-[#b36d19]' : 'text-[#3f9c68]'}`}>{money(account.outstanding, currencySymbol)}{account.overpaid > 0 && <div className="text-[10px] font-bold text-[#2d76c7] mt-1">Credit {money(account.overpaid, currencySymbol)}</div>}</td></tr>)}</tbody>
             </table>
           </div>
         )}
