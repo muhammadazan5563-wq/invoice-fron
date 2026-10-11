@@ -5,12 +5,14 @@ export interface CashExpense { id: number; name: string; amount: number; descrip
 export interface LedgerEntry { date: string; invoices: LedgerInvoice[]; expenses: CashExpense[]; totalReceived: number; totalExpense: number; }
 
 export async function getLedgerInvoices(): Promise<LedgerInvoice[]> {
-  const data = await apiRequest<LedgerInvoice[]>('/api/ledger-invoices');
-  return (data || []).map((row) => ({ ...row, total_amount: Number(row.total_amount || 0) }));
+  const data = await apiRequest<{ invoices?: LedgerInvoice[] } | LedgerInvoice[]>('/api/ledger-invoices?page=1&limit=300');
+  const rows = Array.isArray(data) ? data : (data.invoices || []);
+  return rows.map((row) => ({ ...row, total_amount: Number(row.total_amount || 0) }));
 }
 export async function getCashExpenses(): Promise<CashExpense[]> {
-  const data = await apiRequest<CashExpense[]>('/api/cash-expenses');
-  return (data || []).map((row) => ({ ...row, amount: Number(row.amount || 0) }));
+  const data = await apiRequest<{ expenses?: CashExpense[] } | CashExpense[]>('/api/cash-expenses?page=1&limit=300');
+  const rows = Array.isArray(data) ? data : (data.expenses || []);
+  return rows.map((row) => ({ ...row, amount: Number(row.amount || 0) }));
 }
 export async function createCashExpense(expense: Omit<CashExpense, 'id' | 'created_at'>): Promise<void> { await apiJson('/api/cash-expenses', expense); }
 export async function deleteLedgerInvoice(id: string): Promise<void> { await apiRequest(`/api/ledger-invoices/${encodeURIComponent(id)}`, { method: 'DELETE' }); }
