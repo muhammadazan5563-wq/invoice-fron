@@ -37,6 +37,9 @@ export default function UserHistory({ contacts, template, onEdit, onDelete, onMa
   const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
   const [accountSummary, setAccountSummary] = useState<ContactInvoiceSummary | null>(null);
   const [loading, setLoading] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyHasMore, setHistoryHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searched, setSearched] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [fromDate, setFromDate] = useState('');
@@ -63,14 +66,13 @@ export default function UserHistory({ contacts, template, onEdit, onDelete, onMa
     setLoading(true);
     try {
       const invoiceType = contact.type === 'vendor' ? 'vendor' : 'customer';
-      const result = await getInvoiceHistory(contact.id, invoiceType);
+      const result = await getInvoiceHistory(contact.id, invoiceType, { page: 1, limit: 500 });
       if (requestId === historyRequestRef.current) {
         const sortedInvoices = [...result.invoices].sort((a, b) => {
           const dateDifference = invoiceDateValue(b.date) - invoiceDateValue(a.date);
           return dateDifference || String(b.id || '').localeCompare(String(a.id || ''));
         });
-        setInvoices(sortedInvoices);
-        setAccountSummary(result.summary);
+        setInvoices(sortedInvoices); setHistoryPage(result.page.page); setHistoryHasMore(result.page.hasMore); setAccountSummary(result.summary);
       }
     } catch {
       if (requestId === historyRequestRef.current) { setInvoices([]); setAccountSummary(null); }
@@ -79,6 +81,16 @@ export default function UserHistory({ contacts, template, onEdit, onDelete, onMa
     }
   };
 
+  const loadMoreHistory = async () => {
+    if (!selectedContact || loadingMore || !historyHasMore) return;
+    setLoadingMore(true);
+    try {
+      const invoiceType = selectedContact.type === 'vendor' ? 'vendor' : 'customer';
+      const result = await getInvoiceHistory(selectedContact.id, invoiceType, { page: historyPage + 1, limit: 500 });
+      setInvoices((previous) => [...previous, ...result.invoices].sort((a, b) => invoiceDateValue(b.date) - invoiceDateValue(a.date) || String(b.id || '').localeCompare(String(a.id || ''))));
+      setHistoryPage(result.page.page); setHistoryHasMore(result.page.hasMore);
+    } finally { setLoadingMore(false); }
+  };
   const filteredInvoices = useMemo(() => invoices.filter((invoice) => {
     if (appliedFilters.status && appliedFilters.status !== 'all' && invoice.status !== appliedFilters.status) return false;
     const query = appliedFilters.search.toLowerCase();
@@ -158,7 +170,7 @@ export default function UserHistory({ contacts, template, onEdit, onDelete, onMa
     setSelectedContact(null);
     setContactSearch('');
     setInvoices([]);
-    setSearched(false);
+    setHistoryPage(1); setHistoryHasMore(false); setSearched(false);
   };
 
   const displayedTotals = !appliedFilters.status && !appliedFilters.fromMonth && !appliedFilters.toMonth && !appliedFilters.search && accountSummary
@@ -225,6 +237,7 @@ export default function UserHistory({ contacts, template, onEdit, onDelete, onMa
           <div className="px-6 py-5 border-b border-hairline flex items-center justify-between gap-3"><div><h3 className="text-[18px] font-extrabold text-ink font-display">Invoice history</h3><p className="text-[11px] text-quill-soft font-medium mt-1">Complete chronological record for this account.</p></div><CalendarDays className="w-5 h-5 text-brand" /></div>
           <div key={previewInvoice ? 'history-with-preview' : 'history-full'} className={`grid grid-cols-1 ${previewInvoice ? 'xl:grid-cols-3' : ''} gap-5 p-5`}>
             {filteredInvoices.length === 0 ? <div className="p-12 text-center xl:col-span-3"><FileText className="w-7 h-7 text-quill-soft mx-auto" /><p className="text-[13px] font-bold text-ink mt-3">No invoices match these filters.</p></div> : <div className={`overflow-x-auto ${previewInvoice ? 'xl:col-span-1' : 'xl:col-span-full'}`}><table className="w-full text-left"><thead><tr className="bg-mist text-[10px] uppercase tracking-wider text-quill-soft"><th className="px-6 py-3">Invoice</th><th className="px-4 py-3">Date</th><th className="px-4 py-3 text-right">Billed</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Balance</th><th className="px-4 py-3 text-center">Status</th><th className="px-6 py-3 text-center">Actions</th></tr></thead><tbody>{filteredInvoices.map((invoice) => <tr key={invoice.id} className="border-t border-hairline text-[12px] hover:bg-mist/60"><td className="px-6 py-4 font-extrabold text-brand">#{invoice.id}</td><td className="px-4 py-4 text-quill font-semibold">{invoice.date || '—'}</td><td className="px-4 py-4 text-right nums font-bold text-ink">{money(invoice.totalAmount, currencySymbol)}</td><td className="px-4 py-4 text-right nums font-semibold text-[#3f9c68]">{money(invoice.amountPaid, currencySymbol)}</td><td className={`px-4 py-4 text-right nums font-bold ${invoice.balance < 0 ? 'text-brand' : 'text-[#a8492f]'}`}>{invoice.balance < 0 ? `-${money(Math.abs(invoice.balance), currencySymbol)}` : money(invoice.balance, currencySymbol)}</td><td className="px-4 py-4 text-center"><span className={`inline-flex px-3 py-1.5 rounded-full text-[10px] font-bold ${invoice.balance <= 0 ? 'bg-[#e8f7ee] text-[#2f6b48]' : invoice.status === 'Overdue' ? 'bg-[#fdeeea] text-[#a8492f]' : 'bg-[#fdf3e2] text-[#8a5c17]'}`}>{invoice.balance <= 0 ? 'Paid' : invoice.status}</span></td><td className="px-6 py-4"><div className="flex items-center justify-center gap-0.5"><button type="button" onClick={() => setPreviewInvoice(invoice)} title="View invoice" aria-label={`View invoice ${invoice.id}`} className="w-8 h-8 rounded-full flex items-center justify-center text-quill hover:text-brand hover:bg-brand-pale transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"><Eye className="w-3.5 h-3.5" /></button><button type="button" onClick={() => onEdit?.(invoice)} title="Edit invoice" aria-label={`Edit invoice ${invoice.id}`} disabled={!onEdit} className="w-8 h-8 rounded-full flex items-center justify-center text-quill hover:text-[#8a5c17] hover:bg-[#fdf3e2] disabled:opacity-40 disabled:pointer-events-none transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"><Edit2 className="w-3.5 h-3.5" /></button><button type="button" onClick={() => onDelete?.(invoice)} title="Delete invoice" aria-label={`Delete invoice ${invoice.id}`} disabled={!onDelete} className="w-8 h-8 rounded-full flex items-center justify-center gap-0.5 text-quill hover:text-[#c0453c] hover:bg-[#fdeeea] disabled:opacity-40 disabled:pointer-events-none transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"><Trash2 className="w-3.5 h-3.5" /></button></div></td></tr>)}</tbody></table></div>}
+            {historyHasMore && <div className="xl:col-span-3 flex justify-center"><button type="button" onClick={loadMoreHistory} disabled={loadingMore} className="inline-flex items-center gap-2 bg-brand hover:bg-brand-mid disabled:opacity-60 text-white text-[11px] font-bold px-5 py-2.5 rounded-full">{loadingMore ? 'Loading invoices…' : 'Load 500 more'}</button></div>}
             {previewInvoice && <div className="xl:col-span-2"><InvoiceList key={previewInvoice.id} invoices={[]} total={0} onEdit={onEdit || (() => undefined)} onDelete={async (invoice) => { await onDelete?.(invoice); }} onMarkAsPaid={async (invoice) => { await onMarkAsPaid?.(invoice); }} template={template} initialSelectedInvoice={previewInvoice} onPreviewClose={() => setPreviewInvoice(null)} hideList /></div>}
           </div>
         </section>
