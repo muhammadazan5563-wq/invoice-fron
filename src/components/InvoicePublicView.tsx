@@ -137,7 +137,7 @@ export default function InvoicePublicView() {
             </button>
             <a href="/" className="flex items-center gap-2.5 no-underline">
               <img src={invoiceTemplate.companyLogo || BRAND_MARK} alt="" className="w-8 h-8 object-contain" />
-              <span className="text-[16px] font-extrabold tracking-tight text-ink font-display">{invoiceTemplate.companyName || 'FINNOVA'}</span>
+              <span className="text-[16px] font-extrabold tracking-tight text-ink font-display">{invoiceTemplate.companyName || 'Naidify Ledgder'}</span>
             </a>
           </header>
 
@@ -224,7 +224,7 @@ export default function InvoicePublicView() {
             </button>
             <a href="/" className="flex items-center gap-2.5 no-underline">
               <img src={invoiceTemplate.companyLogo || BRAND_MARK} alt="" className="w-8 h-8 object-contain" />
-              <span className="text-[16px] font-extrabold tracking-tight text-ink font-display">{invoiceTemplate.companyName || 'FINNOVA'}</span>
+              <span className="text-[16px] font-extrabold tracking-tight text-ink font-display">{invoiceTemplate.companyName || 'Naidify Ledgder'}</span>
             </a>
           </div>
 
@@ -248,7 +248,7 @@ export default function InvoicePublicView() {
                   <img src={invoiceTemplate.companyLogo || BRAND_MARK} alt="" className="w-12 h-12 object-contain rounded-xl" />
                   <div>
                     <h1 className="text-[26px] leading-none font-extrabold tracking-tight text-ink font-display">
-                      {invoiceTemplate.companyName || 'FINNOVA'}
+                      {invoiceTemplate.companyName || 'Naidify Ledgder'}
                     </h1>
                     <p className="text-[10px] text-quill-soft font-bold uppercase tracking-wider mt-1.5">
                       {invoiceTemplate.tagline || 'Smart Finances, Better Business'}
@@ -468,7 +468,7 @@ export default function InvoicePublicView() {
 
         <footer className="mt-8 text-center print:hidden">
           <span className="text-[11px] font-semibold text-quill-soft">
-            FINNOVA © 2026 · Smart Finances, Better Business
+            Naidify Ledgder © 2026 · Smart Finances, Better Business
           </span>
         </footer>
       </div>
