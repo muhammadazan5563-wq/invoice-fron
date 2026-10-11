@@ -90,7 +90,7 @@ export default function App() {
             <img src={BRAND_MARK} alt="" className="w-9 h-9 object-contain" />
             <div className="leading-none">
               <span className="block text-[19px] font-extrabold tracking-tight text-ink font-display">
-                AQUA LEDGER
+                Naidify Ledgder
               </span>
               <span className="block text-[9px] font-semibold text-quill-soft mt-1">
                 Fish trading, fully accounted
@@ -145,7 +145,7 @@ export default function App() {
             </h1>
 
             <p className="text-[15px] text-quill leading-relaxed max-w-xl font-medium">
-              Aqua Ledger keeps your fish trade honest: record what you buy from vendors, bill what you
+              Naidify Ledgder keeps your fish trade honest: record what you buy from vendors, bill what you
               sell to customers, and give both sides their own portal to check exactly where they stand.
             </p>
 
@@ -259,7 +259,7 @@ export default function App() {
 
         <footer className="mt-14 pt-6 border-t border-hairline flex flex-wrap items-center justify-between gap-3">
           <span className="text-[11px] font-semibold text-quill-soft">
-            AQUA LEDGER © 2026 · Fish trading invoices
+            Naidify Ledgder © 2026 · Fish trading invoices
           </span>
           <div className="flex items-center gap-4">
             <a
