@@ -140,7 +140,7 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
         <!DOCTYPE html>
         <html>
           <head>
-            <title>${template?.companyName || 'FINNOVA'} - Invoice #${selectedInvoice?.id}</title>
+            <title>${template?.companyName || 'Naidify Ledgder'} - Invoice #${selectedInvoice?.id}</title>
             <meta charset="utf-8">
             <script src="https://cdn.tailwindcss.com"></script>
             <script>
@@ -558,7 +558,7 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
                   )}
                   <div>
                     <h1 className="text-[26px] leading-none font-extrabold tracking-tight text-ink font-display">
-                      {template?.companyName || 'FINNOVA'}
+                      {template?.companyName || 'Naidify Ledgder'}
                     </h1>
                     <p className="text-[10px] text-quill-soft font-bold uppercase tracking-wider mt-1.5">
                       {template?.tagline || 'Smart Finances, Better Business'}
