@@ -190,7 +190,7 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
             <img src={BRAND_MARK} alt="" className="w-9 h-9 object-contain" />
             <div className="hidden sm:block leading-none">
               <span className="block text-[19px] font-extrabold tracking-tight text-ink font-display">
-                AQUA LEDGER
+                Naidify Ledgder
               </span>
               <span className="block text-[9px] font-semibold text-quill-soft mt-1">
                 {role === 'vendor' ? 'Vendor portal' : 'Customer portal'}
@@ -538,7 +538,7 @@ export default function PartnerPanel({ session, onLogout }: PartnerPanelProps) {
 
         <footer className="mt-8 pt-5 border-t border-hairline flex flex-wrap items-center justify-between gap-3">
           <span className="text-[11px] font-semibold text-quill-soft">
-            AQUA LEDGER · Fish trading invoices
+            Naidify Ledgder · Fish trading invoices
           </span>
           <span className="text-[11px] font-semibold text-quill-soft capitalize">
             Signed in as {role}
