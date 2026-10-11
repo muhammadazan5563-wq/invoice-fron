@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Invoice } from '../types';
 import { InvoiceTemplate, getCurrencySymbol } from '../lib/settings';
+import { getInvoiceById } from '../lib/invoices';
 import { getInvoiceGrossAmount } from '../lib/invoice-calculations';
 import { Search, Eye, Edit2, CheckCircle, Trash2, Printer, FileText, Mail, Phone, MapPin, X, Plus, Waves, Loader2 } from 'lucide-react';
 import InvoiceQRCode from './InvoiceQRCode';
@@ -19,6 +20,7 @@ interface InvoiceListProps {
   onPreviewClose?: () => void;
 }
 
+const DISPLAY_PAGE_SIZE = 150;
 const money = (n: number) =>
   (Object.is(n, -0) ? 0 : n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
@@ -26,7 +28,7 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(initialSelectedInvoice);
-  const [visibleCount, setVisibleCount] = useState<number>(600);
+  const [visibleCount, setVisibleCount] = useState<number>(DISPLAY_PAGE_SIZE);
   const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
@@ -34,10 +36,19 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
   }, [hideList, initialSelectedInvoice]);
 
   const currencySymbol = getCurrencySymbol(template?.currency || 'USD');
+  const openInvoice = async (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    try {
+      const detailed = await getInvoiceById(invoice.id, invoice.invoiceType || 'customer');
+      setSelectedInvoice(detailed);
+    } catch {
+      // Keep the lightweight row visible if the detail request fails.
+    }
+  };
 
   useEffect(() => {
-    setVisibleCount(600);
-  }, [search, statusFilter]);
+    setVisibleCount(DISPLAY_PAGE_SIZE);
+  }, [search, statusFilter, total]);
 
   const filteredInvoices = invoices.filter((inv) => {
     if (inv.status === ('Archived' as any)) return false;
@@ -385,7 +396,7 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
                       <td className="py-4 px-5">
                         <button
                           type="button"
-                          onClick={() => setSelectedInvoice(inv)}
+                          onClick={() => openInvoice(inv)}
                           className="flex items-center gap-1.5 text-[12px] font-bold text-brand hover:text-brand-mid transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand rounded"
                         >
                           <FileText className="w-3.5 h-3.5" />
@@ -437,7 +448,7 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
                         <div className="flex items-center justify-center gap-0.5">
                           <button
                             type="button"
-                            onClick={() => setSelectedInvoice(inv)}
+                            onClick={() => openInvoice(inv)}
                             title="View invoice"
                             className="w-8 h-8 rounded-full flex items-center justify-center text-quill hover:text-brand hover:bg-brand-pale transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                           >
@@ -495,18 +506,18 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
                     setLoadingMore(true);
                     try {
                       await onLoadMore();
-                      setVisibleCount((prev) => prev + 600);
+                      setVisibleCount((prev) => prev + DISPLAY_PAGE_SIZE);
                     } finally {
                       setLoadingMore(false);
                     }
                   } else {
-                    setVisibleCount((prev) => prev + 600);
+                    setVisibleCount((prev) => prev + DISPLAY_PAGE_SIZE);
                   }
                 }}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand hover:bg-brand-mid disabled:opacity-60 disabled:pointer-events-none text-white font-bold px-5 py-2.5 rounded-full text-[11px] transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               >
                 {loadingMore ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                {loadingMore ? 'Loading invoices…' : 'Load 600 more'}
+                {loadingMore ? 'Loading invoices…' : `Load ${DISPLAY_PAGE_SIZE} more`}
               </button>
             )}
           </div>
