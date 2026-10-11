@@ -594,7 +594,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
             <img src={BRAND_MARK} alt="" className="w-9 h-9 object-contain" />
             <div className="hidden sm:block leading-none">
               <span className="block text-[19px] font-extrabold tracking-tight text-ink font-display">
-                {invoiceTemplate?.companyName || 'FINNOVA'}
+                {invoiceTemplate?.companyName || 'Naidify Ledgder'}
               </span>
               <span className="block text-[9px] font-semibold text-quill-soft mt-1">
                 Smart Finances, Better Business
@@ -863,7 +863,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
             <InvoiceShowcase
               invoices={filteredInvoices}
               currencySymbol={currencySymbol}
-              companyName={invoiceTemplate?.companyName || 'FINNOVA'}
+              companyName={invoiceTemplate?.companyName || 'Naidify Ledgder'}
               selected={showcaseSelection}
               onSelect={setShowcaseSelection}
               onEdit={(inv) => {
@@ -1046,7 +1046,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         {/* Footer strip */}
         <footer className="mt-8 pt-5 border-t border-hairline flex flex-wrap items-center justify-between gap-3">
           <span className="text-[11px] font-semibold text-quill-soft">
-            {invoiceTemplate?.companyName || 'FINNOVA'} · Smart Finances, Better Business
+            {invoiceTemplate?.companyName || 'Naidify Ledgder'} · Smart Finances, Better Business
           </span>
           <span className="flex items-center gap-1.5 text-[11px] font-semibold text-quill-soft">
             <ShoppingBag className="w-3.5 h-3.5" /> Synced with Supabase
