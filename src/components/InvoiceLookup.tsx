@@ -41,7 +41,7 @@ export default function InvoiceLookup() {
           <a href="/" className="flex items-center gap-2.5 no-underline">
             <img src={BRAND_MARK} alt="" className="w-9 h-9 object-contain" />
             <div className="leading-none">
-              <span className="block text-[19px] font-extrabold tracking-tight text-ink font-display">FINNOVA</span>
+              <span className="block text-[19px] font-extrabold tracking-tight text-ink font-display">Naidify Ledgder</span>
               <span className="block text-[9px] font-semibold text-quill-soft mt-1">
                 Smart Finances, Better Business
               </span>
@@ -126,7 +126,7 @@ export default function InvoiceLookup() {
 
         <footer className="mt-8 text-center">
           <span className="text-[11px] font-semibold text-quill-soft">
-            FINNOVA © 2026 · Smart Finances, Better Business
+            Naidify Ledgder © 2026 · Smart Finances, Better Business
           </span>
         </footer>
       </div>
