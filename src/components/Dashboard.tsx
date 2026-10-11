@@ -531,14 +531,17 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'vendor-dashboard', label: 'Vendor dashboard' },
     { key: 'create', label: 'Invoice' },
-    { key: 'ledger', label: 'Ledger' },
-    { key: 'expenses', label: 'Expenses' },
-    { key: 'accounts', label: 'Accounts' },
-    { key: 'payment', label: 'Payment' },
     { key: 'contacts', label: 'Contacts' },
     { key: 'search', label: 'Search' },
     { key: 'settings', label: 'Settings' },
   ];
+  const ledgerMenuItems: { key: ViewState; label: string }[] = [
+    { key: 'ledger', label: 'Ledger' },
+    { key: 'expenses', label: 'Expenses' },
+    { key: 'accounts', label: 'Accounts' },
+    { key: 'payment', label: 'Payments' },
+  ];
+  const ledgerMenuActive = ledgerMenuItems.some((item) => item.key === viewState);
 
 
 
@@ -612,27 +615,20 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
               {invoices.length}
             </span>
 
-            <nav className="flex items-center gap-1 bg-ink rounded-full p-1.5 overflow-x-auto no-scrollbar max-w-full">
-              {navItems.map((item) => {
-                const active =
-                  viewState === item.key ||
-                  (item.key === 'create' && viewState === 'edit');
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => {
-                      if (item.key === 'create') setEditingInvoice(undefined);
-                      setViewState(item.key);
-                    }}
-                    className={`px-4 py-2.5 rounded-full text-[12px] font-bold whitespace-nowrap transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-soft ${
-                      active ? 'bg-brand text-white' : 'text-white/60 hover:md:text-white'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                );
+            <nav className="flex items-center gap-1 bg-ink rounded-full p-1.5 overflow-visible max-w-full">
+              {navItems.slice(0, 3).map((item) => {
+                const active = viewState === item.key || (item.key === 'create' && viewState === 'edit');
+                return <button key={item.key} type="button" onClick={() => { if (item.key === 'create') setEditingInvoice(undefined); setViewState(item.key); }} className={`px-4 py-2.5 rounded-full text-[12px] font-bold whitespace-nowrap transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-soft ${active ? 'bg-brand text-white' : 'text-white/60 hover:text-white'}`}>{item.label}</button>;
               })}
+              <div className="relative group">
+                <button type="button" onClick={() => setViewState('ledger')} className={`px-4 py-2.5 rounded-full text-[12px] font-bold whitespace-nowrap transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-soft ${ledgerMenuActive ? 'bg-brand text-white' : 'text-white/60 hover:text-white'}`}>Ledger</button>
+                <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 absolute left-0 top-full z-50 pt-2 transition-all duration-150">
+                  <div className="min-w-[150px] rounded-2xl bg-ink p-1.5 shadow-xl">
+                    {ledgerMenuItems.map((item) => <button key={item.key} type="button" onClick={() => setViewState(item.key)} className={`block w-full rounded-xl px-4 py-2.5 text-left text-[12px] font-bold whitespace-nowrap transition-colors ${viewState === item.key ? 'bg-brand text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}>{item.label}</button>)}
+                  </div>
+                </div>
+              </div>
+              {navItems.slice(3).map((item) => <button key={item.key} type="button" onClick={() => setViewState(item.key)} className={`px-4 py-2.5 rounded-full text-[12px] font-bold whitespace-nowrap transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-soft ${viewState === item.key ? 'bg-brand text-white' : 'text-white/60 hover:text-white'}`}>{item.label}</button>)}
             </nav>
           </div>
 
