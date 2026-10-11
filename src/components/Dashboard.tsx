@@ -29,6 +29,7 @@ import { apiRequest } from '../lib/api';
 import InvoiceShowcase from './InvoiceShowcase';
 import Contacts from './Contacts';
 import Payment from './Payment';
+import Accounts from './Accounts';
 import UserHistory from './UserHistory';
 import ExpenseTracker from './ExpenseTracker';
 import { Contact, getContacts } from '../lib/contacts';
@@ -64,7 +65,7 @@ interface DashboardProps {
   onTokenRefresh?: (newToken: string) => void;
 }
 
-type ViewState = 'dashboard' | 'vendor-dashboard' | 'create' | 'edit' | 'settings' | 'ledger' | 'payment' | 'contacts' | 'search' | 'expenses';
+type ViewState = 'dashboard' | 'vendor-dashboard' | 'create' | 'edit' | 'settings' | 'ledger' | 'accounts' | 'payment' | 'contacts' | 'search' | 'expenses';
 
 export default function Dashboard({ user, token, onLogout, onTokenRefresh }: DashboardProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -86,7 +87,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   const [viewState, setViewState] = useState<ViewState>(() => {
     try {
       const savedView = sessionStorage.getItem(`invoice-dashboard-view-${user.uid}`) as ViewState | null;
-      const validViews: ViewState[] = ['dashboard', 'vendor-dashboard', 'create', 'edit', 'settings', 'ledger', 'payment', 'contacts', 'search', 'expenses'];
+      const validViews: ViewState[] = ['dashboard', 'vendor-dashboard', 'create', 'edit', 'settings', 'ledger', 'accounts', 'payment', 'contacts', 'search', 'expenses'];
       return savedView && validViews.includes(savedView) ? savedView : 'dashboard';
     } catch {
       return 'dashboard';
@@ -534,6 +535,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     { key: 'create', label: 'Invoice' },
     { key: 'ledger', label: 'Ledger' },
     { key: 'expenses', label: 'Expenses' },
+    { key: 'accounts', label: 'Accounts' },
     { key: 'payment', label: 'Payment' },
     { key: 'contacts', label: 'Contacts' },
     { key: 'search', label: 'Search' },
@@ -551,8 +553,10 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         ? 'New invoice'
         : viewState === 'edit'
           ? 'Edit invoice'
-            : viewState === 'ledger'
+              : viewState === 'ledger'
               ? 'Ledger'
+              : viewState === 'accounts'
+                ? 'Accounts'
               : viewState === 'payment'
                 ? 'Payment'
               : viewState === 'contacts'
@@ -572,8 +576,10 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         ? 'Draft a new invoice and send it for collection.'
         : viewState === 'edit'
           ? 'Adjust line items, totals and payment records.'
-            : viewState === 'ledger'
+              : viewState === 'ledger'
               ? 'Every payment movement, reconciled by date.'
+              : viewState === 'accounts'
+                ? 'See every customer and vendor balance in one printable account list.'
               : viewState === 'payment'
                 ? 'Record payments and allocate them from the oldest invoice to the newest.'
               : viewState === 'contacts'
@@ -985,6 +991,13 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         {viewState === 'ledger' && (
           <div className="animate-fade-in">
             <Ledger template={invoiceTemplate} />
+          </div>
+        )}
+
+        {/* ── Accounts ───────────────────────────────────────── */}
+        {viewState === 'accounts' && (
+          <div className="animate-fade-in" id="accounts-section">
+            <Accounts template={invoiceTemplate} />
           </div>
         )}
 
