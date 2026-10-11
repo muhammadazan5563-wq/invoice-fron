@@ -86,7 +86,7 @@ function invoiceToRow(invoice: Omit<Invoice, 'rowIndex' | 'rawRow'>) {
 export async function getInvoicesPage(options: InvoicePageOptions = {}): Promise<InvoicePage> {
   const params = new URLSearchParams();
   params.set('page', String(Math.max(1, options.page || 1)));
-  params.set('limit', String(Math.min(2000, Math.max(1, options.limit || 2000))));
+  params.set('limit', String(Math.min(300, Math.max(1, options.limit || 300))));
   if (options.search?.trim()) params.set('search', options.search.trim());
   if (options.status && options.status !== 'All') params.set('status', options.status);
   if (options.customerId) params.set('customerId', options.customerId);
@@ -98,9 +98,9 @@ export async function getInvoicesPage(options: InvoicePageOptions = {}): Promise
   return {
     invoices: rows.map(rowToInvoice),
     page: Number(response?.page || options.page || 1),
-    limit: Number(response?.limit || options.limit || 2000),
+    limit: Number(response?.limit || options.limit || 300),
     total: Number(response?.total ?? rows.length),
-    hasMore: Boolean(response?.hasMore ?? rows.length === (options.limit || 2000)),
+    hasMore: Boolean(response?.hasMore ?? rows.length === (options.limit || 300)),
   };
 }
 
@@ -113,11 +113,14 @@ export async function getExpenseReport(fromDate: string, toDate: string, expense
   };
 }
 
-export async function getInvoiceHistory(contactId: string, invoiceType: 'customer' | 'vendor'): Promise<{ invoices: Invoice[]; summary: ContactInvoiceSummary }> {
-  const params = new URLSearchParams({ customerId: contactId, invoiceType, _ts: String(Date.now()) });
-  const response = await apiRequest<{ invoices?: any[]; summary?: ContactInvoiceSummary }>(`/api/invoices/history?${params.toString()}`, { cache: 'no-store' });
-  const invoices = (response.invoices || []).map(rowToInvoice);
-  return { invoices, summary: response.summary || { billed: 0, paid: 0, overpaid: 0, outstanding: 0, settled: 0, overdue: 0, invoiceCount: invoices.length } };
+export interface InvoiceHistoryPage extends ContactInvoiceSummary { page: number; limit: number; total: number; hasMore: boolean; }
+export async function getInvoiceHistory(contactId: string, invoiceType: 'customer' | 'vendor', options: { page?: number; limit?: number; status?: string; fromDate?: string; toDate?: string; search?: string } = {}): Promise<{ invoices: Invoice[]; summary: ContactInvoiceSummary; page: InvoiceHistoryPage }> {
+  const params = new URLSearchParams({ customerId: contactId, invoiceType, page: String(options.page || 1), limit: String(Math.min(500, Math.max(1, options.limit || 500))), _ts: String(Date.now()) });
+  if (options.status && options.status !== 'all') params.set('status', options.status);
+  if (options.fromDate) params.set('fromDate', options.fromDate); if (options.toDate) params.set('toDate', options.toDate); if (options.search?.trim()) params.set('search', options.search.trim());
+  const response = await apiRequest<{ invoices?: any[]; summary?: ContactInvoiceSummary; page?: number; limit?: number; total?: number; hasMore?: boolean }>(`/api/invoices/history?${params.toString()}`, { cache: 'no-store' });
+  const invoices = (response.invoices || []).map(rowToInvoice); const summary = response.summary || { billed: 0, paid: 0, overpaid: 0, outstanding: 0, settled: 0, overdue: 0, invoiceCount: Number(response.total || invoices.length) };
+  return { invoices, summary, page: { ...summary, page: Number(response.page || options.page || 1), limit: Number(response.limit || options.limit || 500), total: Number(response.total || invoices.length), hasMore: Boolean(response.hasMore) } };
 }
 
 export interface ContactInvoiceSummary { billed: number; paid: number; overpaid: number; outstanding: number; settled: number; overdue: number; invoiceCount: number }
@@ -127,6 +130,9 @@ export async function getContactInvoiceSummary(contactId: string, invoiceType: '
   return apiRequest<ContactInvoiceSummary>(`/api/contact-summary?${params.toString()}`, { cache: 'no-store' });
 }
 
+export async function getInvoiceById(id: string, invoiceType: 'customer' | 'vendor' = 'customer'): Promise<Invoice> {
+  return rowToInvoice(await apiRequest<any>(`/api/invoices/${encodeURIComponent(id)}?invoiceType=${encodeURIComponent(invoiceType)}`));
+}
 export async function getNextInvoiceId(): Promise<string> {
   const response = await apiRequest<{ id: string }>('/api/invoices/next-id', { cache: 'no-store' });
   return response.id;
@@ -142,8 +148,8 @@ export async function getInvoices(): Promise<Invoice[]> {
   return (await getInvoicesPage()).invoices;
 }
 
-export async function createInvoice(invoice: Omit<Invoice, 'rowIndex' | 'rawRow'>): Promise<void> {
-  await apiJson('/api/invoices', invoiceToRow(invoice));
+export async function createInvoice(invoice: Omit<Invoice, 'rowIndex' | 'rawRow'>): Promise<{ id?: string }> {
+  return apiJson<{ id?: string }>('/api/invoices', invoiceToRow(invoice));
 }
 
 export async function updateInvoice(id: string, invoice: Omit<Invoice, 'rowIndex' | 'rawRow'>): Promise<void> {
