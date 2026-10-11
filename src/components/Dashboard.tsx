@@ -153,10 +153,6 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   }, []);
 
   useEffect(() => {
-    fetchDashboardSummary();
-  }, []);
-
-  useEffect(() => {
     if (viewState !== 'create' || editingInvoice) return;
     getNextInvoiceId().then(setNextInvoiceId).catch((err) => console.warn('Could not load next invoice number:', err));
   }, [viewState, editingInvoice]);
