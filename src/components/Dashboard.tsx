@@ -219,7 +219,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
       const nextVendorPage = append ? vendorInvoicePage + 1 : 1;
       const customerPromise = getInvoicesPage({
         page: nextCustomerPage,
-        limit: 2000,
+        limit: 300,
         invoiceType: 'customer',
         customerId: filters.customerId || undefined,
         status: filters.status || undefined,
@@ -229,7 +229,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
       });
       const vendorPromise = getInvoicesPage({
           page: nextVendorPage,
-          limit: 2000,
+          limit: 300,
           invoiceType: 'vendor',
           customerId: vendorFilters.customerId || undefined,
           status: vendorFilters.status || undefined,
@@ -238,7 +238,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
           search: vendorFilters.search || undefined,
         }).catch((vendorError) => {
           console.warn('Vendor invoices are unavailable:', vendorError);
-          return { invoices: [] as Invoice[], total: 0, hasMore: false, page: nextVendorPage, limit: 2000 };
+          return { invoices: [] as Invoice[], total: 0, hasMore: false, page: nextVendorPage, limit: 300 };
         });
       const [customerData, vendorData] = await Promise.all([customerPromise, vendorPromise]);
       if (requestId !== invoiceRequestRef.current) return;
@@ -267,10 +267,12 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
       setLoadingInvoices(true);
       setError(null);
       try {
+        let serverInvoiceId = invoiceData.id;
         if (viewState === 'edit' && editingInvoice) {
           await updateInvoice(editingInvoice.id, invoiceData);
         } else {
-          await createInvoice(invoiceData);
+          const created = await createInvoice(invoiceData);
+          serverInvoiceId = created.id || invoiceData.id;
         }
 
         if (spreadsheetSettings?.spreadsheetId && spreadsheetSettings?.sheetName && token) {
@@ -296,7 +298,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         }
 
         await fetchInvoices();
-        const savedInvoice = invoiceData as Invoice;
+        const savedInvoice = { ...invoiceData, id: serverInvoiceId } as Invoice;
         if (savedInvoice.invoiceType === 'vendor') {
           setVendorInvoices((previous) => {
             const existing = previous.find((invoice) => invoice.id === savedInvoice.id);
@@ -916,6 +918,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
                 </button>
               </div>
               <InvoiceList
+                key={`customer-${JSON.stringify(appliedFilters)}`}
                 invoices={filteredInvoices}
                 total={invoiceTotal}
                 hasMore={hasMoreInvoices}
@@ -964,7 +967,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
                 <Search className="w-3.5 h-3.5" /> Search
               </button>
             </div>
-            <InvoiceList invoices={vendorInvoices} total={vendorInvoiceTotal} hasMore={hasMoreVendorInvoices} onLoadMore={() => fetchInvoices(true)} onEdit={(invoice) => { setEditingInvoice(invoice); setViewState('edit'); }} onDelete={handleDeleteInvoice} onMarkAsPaid={handleMarkAsPaid} template={invoiceTemplate} />
+            <InvoiceList key={`vendor-${JSON.stringify(appliedVendorFilters)}`} invoices={vendorInvoices} total={vendorInvoiceTotal} hasMore={hasMoreVendorInvoices} onLoadMore={() => fetchInvoices(true)} onEdit={(invoice) => { setEditingInvoice(invoice); setViewState('edit'); }} onDelete={handleDeleteInvoice} onMarkAsPaid={handleMarkAsPaid} template={invoiceTemplate} />
           </div>
         )}
 
