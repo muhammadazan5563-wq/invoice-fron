@@ -3,6 +3,7 @@ import { AppUser } from '../lib/auth';
 import { Invoice } from '../types';
 import {
   getInvoicesPage,
+  getInvoiceById,
   getNextInvoiceId,
   createInvoice,
   updateInvoice,
@@ -424,6 +425,17 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     } finally {
       setLoadingInvoices(false);
     }
+  };
+
+  const handleEditInvoice = async (invoice: Invoice) => {
+    try {
+      const detailedInvoice = await getInvoiceById(invoice.id, invoice.invoiceType || 'customer');
+      setEditingInvoice(detailedInvoice);
+    } catch (err) {
+      console.warn('Could not load invoice details for editing:', err);
+      setEditingInvoice(invoice);
+    }
+    setViewState('edit');
   };
 
   const handleDeleteInvoice = async (invoice: Invoice) => {
@@ -866,10 +878,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
               companyName={invoiceTemplate?.companyName || 'Naidify Ledgder'}
               selected={showcaseSelection}
               onSelect={setShowcaseSelection}
-              onEdit={(inv) => {
-                setEditingInvoice(inv);
-                setViewState('edit');
-              }}
+              onEdit={handleEditInvoice}
               onMarkAsPaid={handleMarkAsPaid}
             />
 
@@ -959,7 +968,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
                 <Search className="w-3.5 h-3.5" /> Search
               </button>
             </div>
-            <InvoiceList key={`vendor-${JSON.stringify(appliedVendorFilters)}`} invoices={vendorInvoices} total={vendorInvoiceTotal} hasMore={hasMoreVendorInvoices} onLoadMore={() => fetchInvoices(true)} onEdit={(invoice) => { setEditingInvoice(invoice); setViewState('edit'); }} onDelete={handleDeleteInvoice} onMarkAsPaid={handleMarkAsPaid} template={invoiceTemplate} />
+            <InvoiceList key={`vendor-${JSON.stringify(appliedVendorFilters)}`} invoices={vendorInvoices} total={vendorInvoiceTotal} hasMore={hasMoreVendorInvoices} onLoadMore={() => fetchInvoices(true)} onEdit={handleEditInvoice} onDelete={handleDeleteInvoice} onMarkAsPaid={handleMarkAsPaid} template={invoiceTemplate} />
           </div>
         )}
 
