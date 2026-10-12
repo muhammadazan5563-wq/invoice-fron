@@ -427,7 +427,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
     }
   };
 
-  const handleEditInvoice = async (invoice: Invoice) => {
+  const handleEditInvoice = async (invoice: Invoice, returnView: ViewState = 'dashboard') => {
     try {
       const detailedInvoice = await getInvoiceById(invoice.id, invoice.invoiceType || 'customer');
       setEditingInvoice(detailedInvoice);
@@ -435,6 +435,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
       console.warn('Could not load invoice details for editing:', err);
       setEditingInvoice(invoice);
     }
+    setReturnViewState(returnView);
     setViewState('edit');
   };
 
@@ -924,10 +925,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
                 total={invoiceTotal}
                 hasMore={hasMoreInvoices}
                 onLoadMore={() => fetchInvoices(true)}
-                onEdit={(inv) => {
-                  setEditingInvoice(inv);
-                  setViewState('edit');
-                }}
+                onEdit={handleEditInvoice}
                 onDelete={handleDeleteInvoice}
                 onMarkAsPaid={handleMarkAsPaid}
                 template={invoiceTemplate}
@@ -976,6 +974,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
         {(viewState === 'create' || viewState === 'edit') && (
           <div className="animate-fade-in" id="invoice-editor-section">
       <InvoiceForm
+              key={`${viewState}-${editingInvoice?.id || 'new'}-${editingInvoice?.items?.length || 0}-${editingInvoice?.payments?.length || 0}-${editingInvoice?.totalAmount || 0}`}
               invoice={editingInvoice}
               contacts={contacts}
               suggestInvoiceId={
@@ -1030,11 +1029,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
             key={searchRefreshKey}
             contacts={contacts}
             template={invoiceTemplate}
-            onEdit={(invoice) => {
-              setEditingInvoice(invoice);
-              setReturnViewState('search');
-              setViewState('edit');
-            }}
+            onEdit={(invoice) => handleEditInvoice(invoice, 'search')}
             onDelete={handleDeleteInvoice}
             onMarkAsPaid={handleMarkAsPaid}
           />
