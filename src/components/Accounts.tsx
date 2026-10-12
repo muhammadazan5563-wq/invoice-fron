@@ -64,13 +64,11 @@ export default function Accounts({ template }: AccountsProps) {
   };
 
   const downloadCsv = () => {
-    const headers = ['Name', 'Company', 'Outstanding balance', 'Overpaid', 'Last invoice date', 'Last invoice total'];
+    const headers = ['Name', 'Outstanding balance', 'Last invoice date', 'Last invoice total'];
     const escapeCsv = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
     const rows = accounts.map((account) => [
       account.name,
-      account.companyName,
       account.outstanding,
-      account.overpaid,
       account.lastInvoiceDate || '',
       account.lastInvoice ? account.lastInvoiceTotal : '',
     ]);
