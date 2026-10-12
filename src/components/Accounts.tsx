@@ -64,13 +64,13 @@ export default function Accounts({ template }: AccountsProps) {
   };
 
   const downloadCsv = () => {
-    const headers = ['Name', 'Outstanding balance', 'Last invoice date', 'Last invoice total'];
+    const headers = ['Name', 'Last invoice date', 'Last invoice total', 'Outstanding balance'];
     const escapeCsv = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
     const rows = accounts.map((account) => [
       account.name,
-      account.outstanding,
       account.lastInvoiceDate || '',
       account.lastInvoice ? account.lastInvoiceTotal : '',
+      account.outstanding,
     ]);
     const csv = [headers, ...rows].map((row) => row.map(escapeCsv).join(',')).join('\r\n');
     const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
