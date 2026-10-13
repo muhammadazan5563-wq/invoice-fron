@@ -94,6 +94,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
       return 'dashboard';
     }
   });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | undefined>(undefined);
   const [nextInvoiceId, setNextInvoiceId] = useState('');
   const [returnViewState, setReturnViewState] = useState<ViewState | null>(null);
@@ -628,7 +629,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
               {invoices.length}
             </span>
 
-            <nav className="flex items-center gap-1 bg-ink rounded-full p-1.5 overflow-visible max-w-full">
+            <nav className="hidden lg:flex items-center gap-1 bg-ink rounded-full p-1.5 overflow-visible max-w-full">
               {navItems.slice(0, 3).map((item) => {
                 const active = viewState === item.key || (item.key === 'create' && viewState === 'edit');
                 return <button key={item.key} type="button" onClick={() => { if (item.key === 'create') setEditingInvoice(undefined); setViewState(item.key); }} className={`px-4 py-2.5 rounded-full text-[12px] font-bold whitespace-nowrap transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-soft ${active ? 'bg-brand text-white' : 'text-white/60 hover:text-white'}`}>{item.label}</button>;
@@ -654,7 +655,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
               onClick={() => fetchInvoices()}
               disabled={loadingInvoices}
               title="Sync database"
-              className="w-10 h-10 rounded-full bg-mist hover:bg-mist-2 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              className="hidden lg:flex w-10 h-10 rounded-full bg-mist hover:bg-mist-2 disabled:opacity-50 disabled:pointer-events-none items-center justify-center transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             >
               <RefreshCw className={`w-4 h-4 text-ink ${loadingInvoices ? 'animate-spin' : ''}`} />
             </button>
@@ -663,7 +664,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
               type="button"
               title="Overdue alerts"
               onClick={() => setStatusFilter('Overdue')}
-              className="w-10 h-10 rounded-full bg-mist hover:bg-mist-2 flex items-center justify-center transition-colors duration-200 cursor-pointer relative focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              className="hidden lg:flex w-10 h-10 rounded-full bg-mist hover:bg-mist-2 items-center justify-center transition-colors duration-200 cursor-pointer relative focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             >
               <Bell className="w-4 h-4 text-ink" />
               {overdueCount > 0 && (
@@ -677,30 +678,55 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
               type="button"
               title="Settings"
               onClick={() => setViewState('settings')}
-              className="w-10 h-10 rounded-full bg-mist hover:bg-mist-2 flex items-center justify-center transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              className="hidden lg:flex w-10 h-10 rounded-full bg-mist hover:bg-mist-2 items-center justify-center transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             >
               <SettingsIcon className="w-4 h-4 text-ink" />
             </button>
 
             <div className="flex items-center gap-1.5 ml-0.5">
-              <div className="w-10 h-10 rounded-full bg-brand-soft flex items-center justify-center text-white text-[12px] font-bold overflow-hidden">
+              <button type="button" onClick={() => setMobileMenuOpen((open) => !open)} aria-expanded={mobileMenuOpen} aria-controls="mobile-account-menu" title="Open account menu" className="w-10 h-10 rounded-full bg-brand-soft flex items-center justify-center text-white text-[12px] font-bold overflow-hidden cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand lg:cursor-default">
                 {user.photoURL ? (
                   <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
                 ) : (
                   userInitials
                 )}
-              </div>
+              </button>
               <button
                 type="button"
                 onClick={onLogout}
                 title="Sign out"
-                className="w-9 h-9 rounded-full hover:bg-mist flex items-center justify-center transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                className="hidden lg:flex w-9 h-9 rounded-full hover:bg-mist items-center justify-center transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               >
                 <LogOut className="w-4 h-4 text-quill" />
               </button>
             </div>
           </div>
         </header>
+        <div
+          id="mobile-account-menu"
+          className={`lg:hidden overflow-hidden transition-[max-height,opacity,margin] duration-200 ease-out ${mobileMenuOpen ? 'max-h-[720px] opacity-100 mt-3' : 'max-h-0 opacity-0 pointer-events-none'}`}
+        >
+          <nav aria-label="Mobile account navigation" className="rounded-[24px] bg-ink p-2 shadow-[0_18px_35px_-24px_rgba(19,17,38,0.8)]">
+            <button type="button" onClick={() => { setViewState('dashboard'); setMobileMenuOpen(false); }} className={`w-full rounded-2xl px-4 py-3 text-left text-[12px] font-bold transition-colors ${viewState === 'dashboard' ? 'bg-brand text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}>Dashboard</button>
+            <button type="button" onClick={() => { setViewState('vendor-dashboard'); setMobileMenuOpen(false); }} className={`w-full rounded-2xl px-4 py-3 text-left text-[12px] font-bold transition-colors ${viewState === 'vendor-dashboard' ? 'bg-brand text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}>Vendor dashboard</button>
+            <button type="button" onClick={() => { setEditingInvoice(undefined); setViewState('create'); setMobileMenuOpen(false); }} className={`w-full rounded-2xl px-4 py-3 text-left text-[12px] font-bold transition-colors ${viewState === 'create' || viewState === 'edit' ? 'bg-brand text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}>Invoice</button>
+            <div className="mt-1 border-t border-white/10 pt-1">
+              <button type="button" onClick={() => { setViewState('ledger'); setMobileMenuOpen(false); }} className={`w-full rounded-2xl px-4 py-3 text-left text-[12px] font-bold transition-colors ${ledgerMenuActive ? 'bg-brand text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}>Ledger</button>
+              <div className="ml-3 border-l border-white/15 pl-3">
+                {ledgerMenuItems.slice(1).map((item) => (
+                  <button key={item.key} type="button" onClick={() => { setViewState(item.key); setMobileMenuOpen(false); }} className={`block w-full rounded-xl px-4 py-2.5 text-left text-[11px] font-semibold transition-colors ${viewState === item.key ? 'bg-white/15 text-white' : 'text-white/55 hover:bg-white/10 hover:text-white'}`}>{item.label}</button>
+                ))}
+              </div>
+            </div>
+            {navItems.slice(3).map((item) => (
+              <button key={item.key} type="button" onClick={() => { setViewState(item.key); setMobileMenuOpen(false); }} className={`w-full rounded-2xl px-4 py-3 text-left text-[12px] font-bold transition-colors ${viewState === item.key ? 'bg-brand text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}>{item.label}</button>
+            ))}
+            <div className="mt-1 grid grid-cols-2 gap-2 border-t border-white/10 pt-2">
+              <button type="button" onClick={() => { fetchInvoices(); setMobileMenuOpen(false); }} disabled={loadingInvoices} className="rounded-2xl bg-white/10 px-4 py-3 text-left text-[12px] font-bold text-white/75 transition-colors hover:bg-white/15 hover:text-white disabled:opacity-50">{loadingInvoices ? 'Refreshing…' : 'Refresh'}</button>
+              <button type="button" onClick={onLogout} className="rounded-2xl bg-white/10 px-4 py-3 text-left text-[12px] font-bold text-white/75 transition-colors hover:bg-white/15 hover:text-white">Sign out</button>
+            </div>
+          </nav>
+        </div>
 
         {/* ── Page heading ────────────────────────────────────── */}
         <div className="flex flex-wrap items-start justify-between gap-4 mt-7 mb-6">
