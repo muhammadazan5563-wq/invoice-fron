@@ -102,7 +102,6 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary | null>(null);
   const [vendorDashboardSummary, setVendorDashboardSummary] = useState<DashboardSummary | null>(null);
-  const [mobileAccountMenuOpen, setMobileAccountMenuOpen] = useState(false);
 
   // Filter strip state — drives the ledger + showcase below
   const [customerFilter, setCustomerFilter] = useState('all');
@@ -655,7 +654,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
               onClick={() => fetchInvoices()}
               disabled={loadingInvoices}
               title="Sync database"
-              className="hidden sm:flex w-10 h-10 rounded-full bg-mist hover:bg-mist-2 disabled:opacity-50 disabled:pointer-events-none items-center justify-center transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              className="w-10 h-10 rounded-full bg-mist hover:bg-mist-2 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             >
               <RefreshCw className={`w-4 h-4 text-ink ${loadingInvoices ? 'animate-spin' : ''}`} />
             </button>
@@ -664,7 +663,7 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
               type="button"
               title="Overdue alerts"
               onClick={() => setStatusFilter('Overdue')}
-              className="hidden sm:flex w-10 h-10 rounded-full bg-mist hover:bg-mist-2 items-center justify-center transition-colors duration-200 cursor-pointer relative focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              className="w-10 h-10 rounded-full bg-mist hover:bg-mist-2 flex items-center justify-center transition-colors duration-200 cursor-pointer relative focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             >
               <Bell className="w-4 h-4 text-ink" />
               {overdueCount > 0 && (
@@ -678,95 +677,27 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
               type="button"
               title="Settings"
               onClick={() => setViewState('settings')}
-              className="hidden sm:flex w-10 h-10 rounded-full bg-mist hover:bg-mist-2 items-center justify-center transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              className="w-10 h-10 rounded-full bg-mist hover:bg-mist-2 flex items-center justify-center transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             >
               <SettingsIcon className="w-4 h-4 text-ink" />
             </button>
 
-            <div className="relative flex items-center gap-1.5 ml-0.5">
-              <button
-                type="button"
-                onClick={() => setMobileAccountMenuOpen((open) => !open)}
-                aria-expanded={mobileAccountMenuOpen}
-                aria-controls="mobile-account-actions-menu"
-                title="Open account actions"
-                className="w-10 h-10 rounded-full bg-brand-soft flex items-center justify-center text-white text-[12px] font-bold overflow-hidden cursor-pointer sm:cursor-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-              >
+            <div className="flex items-center gap-1.5 ml-0.5">
+              <div className="w-10 h-10 rounded-full bg-brand-soft flex items-center justify-center text-white text-[12px] font-bold overflow-hidden">
                 {user.photoURL ? (
                   <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
                 ) : (
                   userInitials
                 )}
-              </button>
+              </div>
               <button
                 type="button"
                 onClick={onLogout}
                 title="Sign out"
-                className="hidden sm:flex w-9 h-9 rounded-full hover:bg-mist items-center justify-center transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                className="w-9 h-9 rounded-full hover:bg-mist flex items-center justify-center transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               >
                 <LogOut className="w-4 h-4 text-quill" />
               </button>
-
-              <div
-                id="mobile-account-actions-menu"
-                className={`absolute right-0 top-[calc(100%+10px)] z-20 flex sm:hidden flex-col items-center gap-2 transition-all duration-200 origin-top ${
-                  mobileAccountMenuOpen
-                    ? 'visible translate-y-0 opacity-100'
-                    : 'invisible -translate-y-2 opacity-0 pointer-events-none'
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    fetchInvoices();
-                    setMobileAccountMenuOpen(false);
-                  }}
-                  disabled={loadingInvoices}
-                  title="Sync database"
-                  aria-label="Sync database"
-                  className="w-10 h-10 rounded-full bg-mist hover:bg-mist-2 disabled:opacity-50 flex items-center justify-center shadow-[0_8px_18px_-12px_rgba(19,17,38,0.55)] transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-                >
-                  <RefreshCw className={`w-4 h-4 text-ink ${loadingInvoices ? 'animate-spin' : ''}`} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatusFilter('Overdue');
-                    setMobileAccountMenuOpen(false);
-                  }}
-                  title="Overdue alerts"
-                  aria-label="Overdue alerts"
-                  className="relative w-10 h-10 rounded-full bg-mist hover:bg-mist-2 flex items-center justify-center shadow-[0_8px_18px_-12px_rgba(19,17,38,0.55)] transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-                >
-                  <Bell className="w-4 h-4 text-ink" />
-                  {overdueCount > 0 && (
-                    <span className="nums absolute top-1.5 right-1.5 min-w-[15px] h-[15px] px-1 bg-[#e4694a] rounded-full text-[8px] text-white font-bold flex items-center justify-center">
-                      {overdueCount}
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setViewState('settings');
-                    setMobileAccountMenuOpen(false);
-                  }}
-                  title="Settings"
-                  aria-label="Settings"
-                  className="w-10 h-10 rounded-full bg-mist hover:bg-mist-2 flex items-center justify-center shadow-[0_8px_18px_-12px_rgba(19,17,38,0.55)] transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-                >
-                  <SettingsIcon className="w-4 h-4 text-ink" />
-                </button>
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  title="Sign out"
-                  aria-label="Sign out"
-                  className="w-10 h-10 rounded-full bg-shell hover:bg-mist flex items-center justify-center shadow-[0_8px_18px_-12px_rgba(19,17,38,0.55)] transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-                >
-                  <LogOut className="w-4 h-4 text-quill" />
-                </button>
-              </div>
             </div>
           </div>
         </header>
