@@ -526,9 +526,14 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
         {/* Receipt preview */}
         {selectedInvoice && (
           <div
-            className={`bg-shell rounded-[22px] overflow-hidden flex flex-col ${!hideList ? 'xl:col-span-2' : ''} animate-fade-in print:fixed print:inset-0 print:bg-white print:z-50 print:p-0 shadow-[0_24px_50px_-36px_rgba(19,17,38,0.6)]`}
-            id="invoice-detail-preview"
+            className={!hideList ? 'md:contents max-md:fixed max-md:inset-0 max-md:z-[100] max-md:flex max-md:items-center max-md:justify-center max-md:bg-ink/55 max-md:p-3' : 'contents'}
+            onClick={() => !hideList && (onPreviewClose ? onPreviewClose() : setSelectedInvoice(null))}
           >
+            <div
+              className={`bg-shell rounded-[22px] overflow-hidden flex flex-col ${!hideList ? 'xl:col-span-2 max-md:w-full max-md:max-w-[430px] max-md:max-h-[calc(100dvh-1.5rem)]' : ''} animate-fade-in print:fixed print:inset-0 print:bg-white print:z-50 print:p-0 shadow-[0_24px_50px_-36px_rgba(19,17,38,0.6)]`}
+              id="invoice-detail-preview"
+              onClick={(event) => event.stopPropagation()}
+            >
             <div className="bg-ink text-white px-5 py-4 flex items-center justify-between print:hidden">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-brand-soft" />
@@ -555,7 +560,7 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
 
             <div
               id="invoice-receipt-body"
-              className="p-7 sm:p-8 overflow-y-auto flex-1 space-y-7 print:overflow-visible print:p-0 bg-shell"
+              className="p-7 sm:p-8 max-md:p-4 max-md:space-y-5 overflow-y-auto flex-1 min-h-0 space-y-7 print:overflow-visible print:p-0 bg-shell"
             >
               {/* Branding */}
               <div className="flex flex-wrap justify-between items-start gap-4 pb-6 border-b border-hairline">
@@ -598,7 +603,7 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
                   )}
                 </div>
 
-                <div className="bg-brand text-white rounded-[18px] overflow-hidden flex min-w-[240px]">
+                <div className="bg-brand text-white rounded-[18px] overflow-hidden flex min-w-[240px] max-md:w-full max-md:min-w-0">
                   <div className="p-4 flex-1 text-center border-r border-white/15">
                     <div className="text-[9px] font-bold uppercase tracking-wider text-white/65">Invoice no</div>
                     <div className="nums text-[15px] font-extrabold mt-1">{selectedInvoice.id}</div>
@@ -611,8 +616,8 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
               </div>
 
               {/* Items */}
-              <div className="bg-mist rounded-[18px] overflow-hidden">
-                <table className="w-full text-left border-collapse">
+              <div className="bg-mist rounded-[18px] overflow-hidden max-md:overflow-x-auto">
+                <table className="w-full max-md:min-w-[560px] text-left border-collapse">
                   <thead>
                     <tr className="text-quill font-bold text-[10px] uppercase tracking-wider">
                       <th className="py-3.5 px-4">Fish species</th>
@@ -807,6 +812,7 @@ export default function InvoiceList({ invoices, total, hasMore = false, onLoadMo
                 <Edit2 className="w-3.5 h-3.5 text-quill" /> Edit invoice
               </button>
             </div>
+          </div>
           </div>
         )}
       </div>
