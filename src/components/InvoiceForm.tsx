@@ -476,7 +476,7 @@ export default function InvoiceForm({ invoice, contacts, onSave, onCancel, sugge
 
           <div className="bg-mist rounded-[20px] overflow-visible">
             <div className="overflow-visible">
-              <table className="w-full min-w-[900px] text-left border-collapse">
+              <table className="invoice-line-items w-full min-w-[900px] text-left border-collapse">
                 <thead>
                   <tr className="text-quill">
                     <th className="py-3.5 px-4 text-[10px] font-bold uppercase tracking-wider w-1/4">Fish species</th>
