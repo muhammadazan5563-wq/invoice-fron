@@ -79,6 +79,39 @@ body {
   background-image: none;
 }
 
+/* Keep the desktop invoice line-item table intact, but let each line become
+   a compact three-row editor on phones instead of overflowing horizontally. */
+@media (max-width: 767px) {
+  .invoice-line-items {
+    display: block;
+    min-width: 0 !important;
+  }
+
+  .invoice-line-items thead {
+    display: none;
+  }
+
+  .invoice-line-items tbody {
+    display: block;
+  }
+
+  .invoice-line-items tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .invoice-line-items tbody td {
+    min-width: 0;
+    width: auto;
+  }
+
+  .invoice-line-items tbody td input {
+    min-width: 0;
+  }
+}
+
 /* Print Specific Utility Overrides */
 @media print {
   html,
