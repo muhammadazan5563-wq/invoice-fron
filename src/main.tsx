@@ -7,6 +7,7 @@ import './index.css';
 
 const InvoiceLookup = lazy(() => import('./components/InvoiceLookup.tsx'));
 const InvoicePublicView = lazy(() => import('./components/InvoicePublicView.tsx'));
+const AssistantPage = lazy(() => import('./components/AssistantPage.tsx'));
 
 function RouteLoading() {
   return <div className="min-h-screen flex items-center justify-center bg-canvas"><LoaderCircle className="w-8 h-8 animate-spin text-brand" /></div>;
@@ -18,6 +19,7 @@ createRoot(document.getElementById('root')!).render(
       <Suspense fallback={<RouteLoading />}>
         <Routes>
           <Route path="/" element={<App />} />
+          <Route path="/assistant" element={<AssistantPage />} />
           <Route path="/track" element={<InvoiceLookup />} />
           <Route path="/invoice/:invoiceId" element={<InvoicePublicView />} />
         </Routes>
