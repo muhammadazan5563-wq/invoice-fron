@@ -78,7 +78,7 @@ function AssistantMark({ small = false }: { small?: boolean }) {
 
 function fallbackReply(prompt: string) {
   const lower = prompt.toLowerCase();
-  if (lower.includes('balance') || lower.includes('overview')) return 'I can pull the live figures from your ledger once the AI endpoint is connected. For now, I’m ready to check customer balances, vendor dues, collections and cash flow in one view.';
+  if (lower.includes('balance') || lower.includes('overview')) return 'I’m ready to bring your customer balances, vendor dues, collections and cash flow together in one clear view.';
   if (lower.includes('invoice')) return 'Absolutely. Tell me the customer name, items, quantity, price and tax rate. I’ll prepare a draft first and ask for confirmation before saving it.';
   return 'I understand. I can help with invoices, payments, contacts, expenses, reports and everyday questions about your ledger. Try one of the quick actions below to get started.';
 }
@@ -122,12 +122,12 @@ export default function AssistantPage() {
     setInput('');
     setIsSending(true);
     try {
-      const result = await apiRequest<{ message?: string; reply?: string }>('/api/chat', {
+      const result = await apiRequest<{ message?: string; reply?: string; approvalRequired?: boolean }>('/api/chat', {
         method: 'POST',
         body: JSON.stringify({ message: content, history: [...messages, userMessage].slice(-12) }),
       });
       const reply = result.message || result.reply || fallbackReply(content);
-      const assistantMessage: ChatMessage = { id: makeId(), role: 'assistant', content: reply, time: now() };
+      const assistantMessage: ChatMessage = { id: makeId(), role: 'assistant', content: reply, time: now(), chips: result.approvalRequired ? ['Confirm', 'Cancel'] : undefined };
       setMessages((current) => [...current, assistantMessage]);
       speak(reply);
     } catch {
