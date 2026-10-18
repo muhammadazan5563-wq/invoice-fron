@@ -1,0 +1,1 @@
+{"routes":[{"path":"/","title":"Naidify Ledger"},{"path":"/assistant","title":"Naidify AI Assistant"},{"path":"/track","title":"Track invoice"},{"path":"/invoice/:invoiceId","title":"Invoice"}]}
