@@ -51,6 +51,7 @@ import {
   ClipboardList,
   Repeat,
   ShoppingBag,
+  Sparkles,
 } from 'lucide-react';
 
 const WORKSPACE_IMAGE =
@@ -753,6 +754,12 @@ export default function Dashboard({ user, token, onLogout, onTokenRefresh }: Das
           </div>
 
           <div className="flex items-center gap-2.5">
+            <a
+              href="/assistant"
+              className="hidden sm:flex items-center gap-2 bg-brand-pale hover:bg-brand text-brand hover:text-white text-[12px] font-extrabold px-4 py-3 rounded-full transition-colors duration-200 no-underline"
+            >
+              <Sparkles className="w-3.5 h-3.5" /> AI assistant
+            </a>
             <button
               type="button"
               onClick={resetFilters}
